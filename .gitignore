@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+server/.env
+client/.env.local
+service-account-key.json
+**/service-account-key*.json
+
+# Build output
+client/build/
+
+# Uploads
+server/src/uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage & testing
+coverage/
+
+# Misc
+*.tgz
+.cache/
