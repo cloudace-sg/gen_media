@@ -1,0 +1,53 @@
+{
+  "name": "ai-image-canvas-client",
+  "version": "1.0.0",
+  "description": "React frontend for AI image canvas",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.6.2",
+    "clsx": "^2.0.0",
+    "firebase": "^12.3.0",
+    "konva": "^9.3.22",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-colorful": "^5.6.1",
+    "react-dom": "^18.2.0",
+    "react-konva": "^18.2.14",
+    "react-router-dom": "^6.30.1",
+    "react-scripts": "5.0.1",
+    "tailwind-merge": "^2.0.0",
+    "use-image": "^1.1.4",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "dev": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "proxy": "http://localhost:3001"
+}

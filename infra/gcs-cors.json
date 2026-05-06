@@ -1,0 +1,26 @@
+[
+  {
+    "origin": [
+      "https://gen-media-poc-644122172233.asia-southeast1.run.app",
+      "https://gen-media-poc-2-644122172233.asia-southeast1.run.app",
+      "http://localhost:3000",
+      "*"
+    ],
+    "method": ["GET", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "Access-Control-Allow-Origin",
+      "Access-Control-Allow-Methods",
+      "Access-Control-Allow-Headers",
+      "Access-Control-Allow-Credentials",
+      "Cache-Control",
+      "Pragma",
+      "Expires",
+      "x-goog-meta-*"
+    ],
+    "maxAgeSeconds": 0
+  }
+]
+
+
