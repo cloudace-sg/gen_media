@@ -3,118 +3,239 @@ const axios = require('axios');
 const router = express.Router();
 
 const PEXELS_BASE = 'https://api.pexels.com';
+const UNSPLASH_BASE = 'https://api.unsplash.com';
+const PIXABAY_BASE = 'https://pixabay.com/api';
 
-function getPexelsKey() {
-  const key = process.env.PEXELS_API_KEY;
-  if (!key) return null;
-  return key;
+function getKeys() {
+  return {
+    pexels: process.env.PEXELS_API_KEY || null,
+    unsplash: process.env.UNSPLASH_ACCESS_KEY || null,
+    pixabay: process.env.PIXABAY_API_KEY || null
+  };
 }
 
-// Image search via Pexels
-router.get('/', async (req, res) => {
+async function searchPexelsImages(query, perPage, apiKey) {
   try {
-    const { query, start = 1, num = 10 } = req.query;
-
-    if (!query) {
-      return res.status(400).json({ error: 'Query parameter is required' });
-    }
-
-    const apiKey = getPexelsKey();
-    if (!apiKey) {
-      return res.status(500).json({
-        error: 'Search API configuration missing',
-        message: 'Please configure PEXELS_API_KEY'
-      });
-    }
-
-    const page = Math.max(1, Math.ceil(Number(start) / Number(num)));
-    const perPage = Math.min(Number(num), 80);
-
     const response = await axios.get(`${PEXELS_BASE}/v1/search`, {
       headers: { Authorization: apiKey },
-      params: { query, page, per_page: perPage }
+      params: { query, per_page: perPage },
+      timeout: 5000
     });
-
-    const results = (response.data.photos || []).map((photo, index) => ({
-      id: `search_${Date.now()}_${index}`,
+    return (response.data.photos || []).map((photo, i) => ({
+      id: `pexels_${photo.id}`,
       title: photo.alt || query,
       url: photo.src.original,
       thumbnail: photo.src.medium,
-      source: `pexels.com – ${photo.photographer}`,
+      source: `Pexels – ${photo.photographer}`,
       width: photo.width,
       height: photo.height
     }));
-
-    res.json({
-      query,
-      results,
-      totalResults: response.data.total_results || 0,
-      searchTime: 0,
-      licenseFilter: 'pexels',
-      licenseInfo: 'Pexels license – free for personal and commercial use with attribution'
-    });
-  } catch (error) {
-    console.error('Search API error:', error.response?.data || error.message);
-    res.status(500).json({
-      error: 'Search failed',
-      message: error.response?.data?.error || error.message || 'Failed to search images'
-    });
+  } catch (e) {
+    console.warn('Pexels image search failed:', e.message);
+    return [];
   }
-});
+}
 
-// Video search via Pexels
-router.get('/videos', async (req, res) => {
+async function searchUnsplashImages(query, perPage, apiKey) {
   try {
-    const { query, start = 1, num = 10 } = req.query;
+    const response = await axios.get(`${UNSPLASH_BASE}/search/photos`, {
+      headers: { Authorization: `Client-ID ${apiKey}` },
+      params: { query, per_page: perPage },
+      timeout: 5000
+    });
+    return (response.data.results || []).map((photo, i) => ({
+      id: `unsplash_${photo.id}`,
+      title: photo.alt_description || photo.description || query,
+      url: photo.urls.full,
+      thumbnail: photo.urls.small,
+      source: `Unsplash – ${photo.user?.name || 'Unknown'}`,
+      width: photo.width,
+      height: photo.height
+    }));
+  } catch (e) {
+    console.warn('Unsplash image search failed:', e.message);
+    return [];
+  }
+}
 
-    if (!query) {
-      return res.status(400).json({ error: 'Query parameter is required' });
-    }
+async function searchPixabayImages(query, perPage, apiKey) {
+  try {
+    const response = await axios.get(PIXABAY_BASE, {
+      params: { key: apiKey, q: query, per_page: perPage, image_type: 'photo', min_width: 800 },
+      timeout: 5000
+    });
+    return (response.data.hits || []).map((hit, i) => ({
+      id: `pixabay_${hit.id}`,
+      title: hit.tags || query,
+      url: hit.largeImageURL,
+      thumbnail: hit.previewURL,
+      source: `Pixabay – ${hit.user || 'Unknown'}`,
+      width: hit.imageWidth,
+      height: hit.imageHeight
+    }));
+  } catch (e) {
+    console.warn('Pixabay image search failed:', e.message);
+    return [];
+  }
+}
 
-    const apiKey = getPexelsKey();
-    if (!apiKey) {
-      return res.status(500).json({
-        error: 'Search API configuration missing',
-        message: 'Please configure PEXELS_API_KEY'
-      });
-    }
-
-    const page = Math.max(1, Math.ceil(Number(start) / Number(num)));
-    const perPage = Math.min(Number(num), 80);
-
+async function searchPexelsVideos(query, perPage, apiKey) {
+  try {
     const response = await axios.get(`${PEXELS_BASE}/videos/search`, {
       headers: { Authorization: apiKey },
-      params: { query, page, per_page: perPage }
+      params: { query, per_page: perPage },
+      timeout: 5000
     });
-
-    const results = (response.data.videos || []).map((video, index) => {
+    return (response.data.videos || []).map((video, i) => {
       const hdFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0] || {};
       return {
-        id: `video_search_${Date.now()}_${index}`,
+        id: `pexels_video_${video.id}`,
         title: video.url.split('/').pop() || query,
         url: hdFile.link || '',
         thumbnail: video.image || '',
-        source: `pexels.com – ${video.user?.name || 'Unknown'}`,
+        source: `Pexels – ${video.user?.name || 'Unknown'}`,
         width: hdFile.width || video.width,
         height: hdFile.height || video.height,
         duration: video.duration,
         type: 'video'
       };
     });
+  } catch (e) {
+    console.warn('Pexels video search failed:', e.message);
+    return [];
+  }
+}
+
+async function searchPixabayVideos(query, perPage, apiKey) {
+  try {
+    const response = await axios.get(`${PIXABAY_BASE}/videos/`, {
+      params: { key: apiKey, q: query, per_page: perPage },
+      timeout: 5000
+    });
+    return (response.data.hits || []).map((hit, i) => {
+      const hdVideo = hit.videos?.large || hit.videos?.medium || {};
+      return {
+        id: `pixabay_video_${hit.id}`,
+        title: hit.tags || query,
+        url: hdVideo.url || '',
+        thumbnail: `https://i.vimeocdn.com/video/${hit.picture_id}_640x360.jpg`,
+        source: `Pixabay – ${hit.user || 'Unknown'}`,
+        width: hdVideo.width || 1920,
+        height: hdVideo.height || 1080,
+        duration: hit.duration,
+        type: 'video'
+      };
+    });
+  } catch (e) {
+    console.warn('Pixabay video search failed:', e.message);
+    return [];
+  }
+}
+
+function interleave(...arrays) {
+  const result = [];
+  const maxLen = Math.max(...arrays.map(a => a.length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const arr of arrays) {
+      if (i < arr.length) result.push(arr[i]);
+    }
+  }
+  return result;
+}
+
+// Multi-source image search
+router.get('/', async (req, res) => {
+  try {
+    const { query, num = 10 } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+
+    const keys = getKeys();
+    if (!keys.pexels && !keys.unsplash && !keys.pixabay) {
+      return res.status(500).json({
+        error: 'Search API configuration missing',
+        message: 'Please configure at least one: PEXELS_API_KEY, UNSPLASH_ACCESS_KEY, or PIXABAY_API_KEY'
+      });
+    }
+
+    const perSource = Math.ceil(Number(num) / Object.values(keys).filter(Boolean).length);
+    const searches = [];
+
+    if (keys.pexels) searches.push(searchPexelsImages(query, perSource, keys.pexels));
+    if (keys.unsplash) searches.push(searchUnsplashImages(query, perSource, keys.unsplash));
+    if (keys.pixabay) searches.push(searchPixabayImages(query, perSource, keys.pixabay));
+
+    const allResults = await Promise.all(searches);
+    const results = interleave(...allResults).slice(0, Number(num));
+
+    const sources = [];
+    if (keys.pexels) sources.push('Pexels');
+    if (keys.unsplash) sources.push('Unsplash');
+    if (keys.pixabay) sources.push('Pixabay');
 
     res.json({
       query,
       results,
-      totalResults: response.data.total_results || 0,
+      totalResults: results.length,
       searchTime: 0,
-      licenseFilter: 'pexels',
-      licenseInfo: 'Pexels license – free for personal and commercial use with attribution'
+      licenseFilter: 'free',
+      licenseInfo: `Free for commercial use – sourced from ${sources.join(', ')}`
     });
   } catch (error) {
-    console.error('Video search API error:', error.response?.data || error.message);
+    console.error('Search API error:', error.message);
+    res.status(500).json({
+      error: 'Search failed',
+      message: error.message || 'Failed to search images'
+    });
+  }
+});
+
+// Multi-source video search
+router.get('/videos', async (req, res) => {
+  try {
+    const { query, num = 10 } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+
+    const keys = getKeys();
+    const videoKeys = { pexels: keys.pexels, pixabay: keys.pixabay };
+    if (!videoKeys.pexels && !videoKeys.pixabay) {
+      return res.status(500).json({
+        error: 'Video search API configuration missing',
+        message: 'Please configure at least one: PEXELS_API_KEY or PIXABAY_API_KEY'
+      });
+    }
+
+    const perSource = Math.ceil(Number(num) / Object.values(videoKeys).filter(Boolean).length);
+    const searches = [];
+
+    if (videoKeys.pexels) searches.push(searchPexelsVideos(query, perSource, videoKeys.pexels));
+    if (videoKeys.pixabay) searches.push(searchPixabayVideos(query, perSource, videoKeys.pixabay));
+
+    const allResults = await Promise.all(searches);
+    const results = interleave(...allResults).slice(0, Number(num));
+
+    const sources = [];
+    if (videoKeys.pexels) sources.push('Pexels');
+    if (videoKeys.pixabay) sources.push('Pixabay');
+
+    res.json({
+      query,
+      results,
+      totalResults: results.length,
+      searchTime: 0,
+      licenseFilter: 'free',
+      licenseInfo: `Free for commercial use – sourced from ${sources.join(', ')}`
+    });
+  } catch (error) {
+    console.error('Video search API error:', error.message);
     res.status(500).json({
       error: 'Video search failed',
-      message: error.response?.data?.error || error.message || 'Failed to search videos'
+      message: error.message || 'Failed to search videos'
     });
   }
 });
