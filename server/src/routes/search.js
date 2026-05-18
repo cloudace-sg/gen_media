@@ -97,7 +97,8 @@ async function searchPexelsVideos(query, perPage, apiKey) {
         width: hdFile.width || video.width,
         height: hdFile.height || video.height,
         duration: video.duration,
-        type: 'video'
+        type: 'video',
+        mediaType: 'video'
       };
     });
   } catch (e) {
@@ -123,7 +124,8 @@ async function searchPixabayVideos(query, perPage, apiKey) {
         width: hdVideo.width || 1920,
         height: hdVideo.height || 1080,
         duration: hit.duration,
-        type: 'video'
+        type: 'video',
+        mediaType: 'video'
       };
     });
   } catch (e) {
