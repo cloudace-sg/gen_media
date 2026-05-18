@@ -29,10 +29,15 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
                     src={item.thumbnail}
                     alt={item.title || 'Video thumbnail'}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling && (e.target.nextSibling.style.display = 'flex');
+                    }}
                   />
-                ) : (
-                  <div className="w-full h-full bg-gray-700" />
-                )}
+                ) : null}
+                <div className="w-full h-full bg-gray-700 items-center justify-center text-gray-400 text-xs" style={{ display: item.thumbnail ? 'none' : 'flex' }}>
+                  Video
+                </div>
                 <div 
                   className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-50 transition-all cursor-pointer"
                   onClick={() => onImageClick(item, index)}

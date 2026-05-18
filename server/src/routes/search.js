@@ -114,12 +114,16 @@ async function searchPixabayVideos(query, perPage, apiKey) {
       timeout: 5000
     });
     return (response.data.hits || []).map((hit, i) => {
-      const hdVideo = hit.videos?.large || hit.videos?.medium || {};
+      const hdVideo = hit.videos?.large || hit.videos?.medium || hit.videos?.small || {};
+      const tinyVideo = hit.videos?.tiny || {};
+      const thumbnail = hit.picture_id
+        ? `https://i.vimeocdn.com/video/${hit.picture_id}_295x166.jpg`
+        : (tinyVideo.thumbnail || tinyVideo.url || '');
       return {
         id: `pixabay_video_${hit.id}`,
         title: hit.tags || query,
         url: hdVideo.url || '',
-        thumbnail: `https://i.vimeocdn.com/video/${hit.picture_id}_640x360.jpg`,
+        thumbnail,
         source: `Pixabay – ${hit.user || 'Unknown'}`,
         width: hdVideo.width || 1920,
         height: hdVideo.height || 1080,
