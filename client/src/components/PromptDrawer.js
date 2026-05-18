@@ -249,10 +249,10 @@ const PromptDrawer = () => {
     try {
       let results;
       if (outputMode === 'video') {
-        results = await searchVideos(prompt, 1, 10);
+        results = await searchVideos(prompt, 1, 30);
         addRow({ type: 'search', title: 'VIDEO SEARCH', images: results.results, query: prompt, licenseInfo: results.licenseInfo });
       } else {
-        results = await searchImages(prompt, 1, 10, 'creative_commons');
+        results = await searchImages(prompt, 1, 30, 'creative_commons');
         addRow({ type: 'search', title: 'SEARCH', images: results.results, query: prompt, licenseInfo: results.licenseInfo });
       }
       setPrompt('');
