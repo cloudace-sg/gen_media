@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Image as ImageIcon, Film, X, Upload as UploadIcon, Loader2, Lightbulb, ChevronLeft, ChevronRight, HelpCircle, ChevronDown, Target, Megaphone, FileText, Users, Globe, Camera, Video, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { searchImages, generateImages, remixImages, uploadImages, generateVideo, improvePrompt, randomPrompt, listStyles } from '../services/api';
+import { searchImages, searchVideos, generateImages, remixImages, uploadImages, generateVideo, improvePrompt, randomPrompt, listStyles } from '../services/api';
 import { Wand2 } from 'lucide-react';
 
 // Custom dropdown component for purpose selection
@@ -247,8 +247,14 @@ const PromptDrawer = () => {
     if (!prompt.trim()) return;
     setLoading('search', true);
     try {
-      const results = await searchImages(prompt, 1, 10, 'creative_commons');
-      addRow({ type: 'search', title: 'SEARCH', images: results.results, query: prompt, licenseInfo: results.licenseInfo });
+      let results;
+      if (outputMode === 'video') {
+        results = await searchVideos(prompt, 1, 10);
+        addRow({ type: 'search', title: 'VIDEO SEARCH', images: results.results, query: prompt, licenseInfo: results.licenseInfo });
+      } else {
+        results = await searchImages(prompt, 1, 10, 'creative_commons');
+        addRow({ type: 'search', title: 'SEARCH', images: results.results, query: prompt, licenseInfo: results.licenseInfo });
+      }
       setPrompt('');
     } finally { setLoading('search', false); }
   };
@@ -362,7 +368,7 @@ const PromptDrawer = () => {
             rows={6}
             value={prompt}
             onChange={(e)=>setPrompt(e.target.value)}
-            placeholder={isSearchMode ? 'Search for images...' : (outputMode==='video' ? 'Describe the video...' : (stagedImages.length===0 ? 'Describe an image to create...' : 'Describe how to remix the referenced images...'))}
+            placeholder={isSearchMode ? (outputMode==='video' ? 'Search for videos...' : 'Search for images...') : (outputMode==='video' ? 'Describe the video...' : (stagedImages.length===0 ? 'Describe an image to create...' : 'Describe how to remix the referenced images...'))}
             className="w-full resize-none p-3 rounded bg-dark-bg border border-dark-border text-dark-text placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent font-mono"
           />
           <div className="flex items-center gap-2">

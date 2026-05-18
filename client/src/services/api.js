@@ -79,6 +79,18 @@ export const searchImages = async (query, start = 1, num = 10, license = 'creati
   }
 };
 
+// Video Search API
+export const searchVideos = async (query, start = 1, num = 10) => {
+  try {
+    const response = await api.get('/search/videos', {
+      params: { query, start, num }
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to search videos');
+  }
+};
+
 // Generate API
 export const generateImages = async (prompt, purpose, imageCount = 1, aspectRatio = '16:9', styleId) => {
   try {
