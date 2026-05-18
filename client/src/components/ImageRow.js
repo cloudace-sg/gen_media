@@ -16,42 +16,26 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
 
   return (
     <div className="image-row-container">
-      <div className="flex gap-2 overflow-x-auto pb-3" style={{ scrollbarWidth: 'thin' }}>
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 pb-3">
         {imageArray.map((item, index) => (
-          <div key={item.id} className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden group cursor-pointer shadow-sm">
+          <div key={item.id} className="relative aspect-square rounded-2xl overflow-hidden group cursor-pointer shadow-sm">
             {(() => {
               const isVideo = item.mediaType === 'video' || item.url.includes('.mp4');
-              if (isVideo) console.log('Detected video:', item);
               return isVideo;
             })() ? (
               <div className="relative w-full h-full bg-gray-800 flex items-center justify-center">
-                <video
-                  src={item.url}
-                  className="w-full h-full object-cover"
-                  onLoadStart={() => console.log('Video load started:', item.url)}
-                  onLoadedData={() => console.log('Video data loaded:', item.url)}
-                  onCanPlay={() => console.log('Video can play:', item.url)}
-                  onError={(e) => {
-                    console.error('Video error details:', {
-                      error: e,
-                      target: e.target,
-                      errorCode: e.target?.error?.code,
-                      errorMessage: e.target?.error?.message,
-                      networkState: e.target?.networkState,
-                      readyState: e.target?.readyState,
-                      url: item.url
-                    });
-                  }}
-                  preload="none"
-                  muted
-                  poster=""
-                />
+                {item.thumbnail ? (
+                  <img
+                    src={item.thumbnail}
+                    alt={item.title || 'Video thumbnail'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-700" />
+                )}
                 <div 
                   className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-50 transition-all cursor-pointer"
-                  onClick={() => {
-                    console.log('Video clicked:', item);
-                    onImageClick(item, index);
-                  }}
+                  onClick={() => onImageClick(item, index)}
                 >
                   <div className="w-8 h-8 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
                     <svg className="w-4 h-4 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24">
@@ -59,6 +43,11 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
                     </svg>
                   </div>
                 </div>
+                {item.duration && (
+                  <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
+                    {item.duration}s
+                  </div>
+                )}
               </div>)
             : (
               <ImageThumbnail
