@@ -160,10 +160,19 @@ class GeminiService {
     const { candidates } = await this.genAI.models.generateContent({
       model: 'gemini-3.5-flash',
       contents: [{ role: 'user', parts }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        thinkingConfig: { thinkingBudget: -1 }
+      }
     });
 
-    const text = candidates?.[0]?.content?.parts?.map(p => p.text).join(' ').trim();
+    // Filter out thought parts — only keep visible response text
+    const text = candidates?.[0]?.content?.parts
+      ?.filter(p => !p.thought)
+      .map(p => p.text)
+      .join(' ')
+      .trim();
     let out = { improvedPrompt: prompt, negativePrompt: '', rationale: [] };
 
     if (text) {
