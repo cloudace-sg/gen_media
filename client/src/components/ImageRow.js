@@ -23,7 +23,8 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
               const isVideo = item.mediaType === 'video' || item.url.includes('.mp4');
               return isVideo;
             })() ? (
-              <div className="relative w-full h-full bg-gray-800 flex items-center justify-center">
+              // Video thumbnail with staging support
+              <div className="relative w-full h-full bg-gray-800">
                 {item.thumbnail ? (
                   <img
                     src={item.thumbnail}
@@ -39,7 +40,7 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
                   Video
                 </div>
                 <div 
-                  className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-50 transition-all cursor-pointer"
+                  className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 group-hover:bg-opacity-50 transition-all cursor-pointer"
                   onClick={() => onImageClick(item, index)}
                 >
                   <div className="w-8 h-8 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
@@ -53,8 +54,39 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
                     {item.duration}s
                   </div>
                 )}
-              </div>)
-            : (
+                
+                {/* Staging button for videos */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onImageSelect(item, e);
+                  }}
+                  className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 ${
+                    isImageSelected(item.id)
+                      ? 'bg-accent text-white'
+                      : 'bg-black bg-opacity-70 text-white hover:bg-opacity-90'
+                  }`}
+                  title={isImageSelected(item.id) ? 'Remove from staging' : 'Add to staging'}
+                >
+                  {isImageSelected(item.id) ? (
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 5v14m7-7H5"/>
+                    </svg>
+                  )}
+                </button>
+
+                {/* Selection indicator for videos */}
+                {isImageSelected(item.id) && (
+                  <div className="absolute top-1 left-1 w-6 h-6 bg-accent text-black rounded-full flex items-center justify-center text-xs font-bold">
+                    ✓
+                  </div>
+                )}
+              </div>
+            ) : (
               <ImageThumbnail
                 image={item}
                 onClick={() => onImageClick(item, index)}
@@ -62,6 +94,7 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
                 isSelected={isImageSelected(item.id)}
                 rowType={rowType}
                 selectedImages={selectedImages}
+                mediaType={item.mediaType || 'image'}
               />
             )}
             {isEdited(item.id) && (
