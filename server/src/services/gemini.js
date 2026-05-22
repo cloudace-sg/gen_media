@@ -74,7 +74,7 @@ class GeminiService {
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
           { role: 'user', parts: [{ text: `User prompt: ${prompt}` }] }
@@ -158,7 +158,7 @@ class GeminiService {
     ];
 
     const { candidates } = await this.genAI.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
     });
@@ -286,7 +286,7 @@ class GeminiService {
     ];
 
     const { candidates } = await this.genAI.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.9, maxOutputTokens: 200 }
     });
@@ -333,7 +333,7 @@ class GeminiService {
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
           { role: 'user', parts: [{ text: `User prompt: ${prompt}` }] }
@@ -808,7 +808,7 @@ Transform this into a high-precision marketing prompt. If an aspect ratio is pro
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: [
           { role: 'user', parts: [{ text: systemPrompt }] },
           { role: 'user', parts: [{ text: userMessage }] }
