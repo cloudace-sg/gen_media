@@ -97,6 +97,8 @@ class GeminiService {
     for (const img of images) {
       try {
         const url = img.url || '';
+        const isVideo = img.mediaType === 'video' || url.includes('.mp4');
+
         if (url.startsWith('data:')) {
           const m = url.match(/^data:(.+?);base64,(.*)$/);
           if (m) {
@@ -111,7 +113,7 @@ class GeminiService {
         }
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
-        const mimeType = mime.lookup(url) || 'image/jpeg';
+        const mimeType = isVideo ? 'video/mp4' : (mime.lookup(url) || 'image/jpeg');
 
         preparedImages.push({
           inlineData: {
@@ -120,8 +122,8 @@ class GeminiService {
           },
         });
       } catch (error) {
-        console.error(`Failed to download or process image from ${img.url}:`, error.message);
-        throw new Error(`Failed to process image for remix: ${img.url}`);
+        console.error(`Failed to download or process image/video from ${img.url}:`, error.message);
+        throw new Error(`Failed to process image/video for remix: ${img.url}`);
       }
     }
     return preparedImages;
@@ -372,9 +374,30 @@ class GeminiService {
     const negativePrompt = params.negativePrompt || undefined;
     const personGeneration = params.personGeneration || undefined;
 
-    // Optional: load image bytes if imageUrl provided
+    // Optional: load image/video bytes if imageUrl or videoUrl provided
     let imagePart = undefined;
-    if (params.imageUrl) {
+    if (params.videoUrl) {
+      console.log('Processing video reference for video generation:', params.videoUrl);
+      const url = params.videoUrl;
+      if (url.startsWith('data:')) {
+        // Support data URLs like data:video/mp4;base64,XXXXX
+        const match = url.match(/^data:(.+?);base64,(.*)$/);
+        if (match) {
+          const [, mt, b64] = match;
+          imagePart = { videoBytes: b64, mimeType: mt };
+          console.log('Using data URL video for video generation');
+        }
+      } else {
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(response.data);
+        const mimeType = 'video/mp4';
+        imagePart = {
+          videoBytes: buffer.toString('base64'),
+          mimeType
+        };
+        console.log('Downloaded and processed video reference for video generation, size:', buffer.length, 'bytes');
+      }
+    } else if (params.imageUrl) {
       console.log('Processing image for video generation:', params.imageUrl);
       const url = params.imageUrl;
       if (url.startsWith('data:')) {
@@ -396,7 +419,7 @@ class GeminiService {
         console.log('Downloaded and processed image for video generation, size:', buffer.length, 'bytes');
       }
     } else {
-      console.log('No image provided for video generation - text-to-video mode');
+      console.log('No image or video provided for video generation - text-to-video mode');
     }
 
     // Step 1: kick off generation with optional image input
