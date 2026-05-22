@@ -376,32 +376,27 @@ class GeminiService {
 
     // Optional: load image/video bytes if imageUrl or videoUrl provided
     let imagePart = undefined;
+    let videoPart = undefined;
     if (params.videoUrl) {
       console.log('Processing video reference for video generation:', params.videoUrl);
       const url = params.videoUrl;
       if (url.startsWith('data:')) {
-        // Support data URLs like data:video/mp4;base64,XXXXX
         const match = url.match(/^data:(.+?);base64,(.*)$/);
         if (match) {
           const [, mt, b64] = match;
-          imagePart = { videoBytes: b64, mimeType: mt };
+          videoPart = { videoBytes: b64, mimeType: mt };
           console.log('Using data URL video for video generation');
         }
       } else {
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
-        const mimeType = 'video/mp4';
-        imagePart = {
-          videoBytes: buffer.toString('base64'),
-          mimeType
-        };
-        console.log('Downloaded and processed video reference for video generation, size:', buffer.length, 'bytes');
+        videoPart = { videoBytes: buffer.toString('base64'), mimeType: 'video/mp4' };
+        console.log('Downloaded video reference for video generation, size:', buffer.length, 'bytes');
       }
     } else if (params.imageUrl) {
       console.log('Processing image for video generation:', params.imageUrl);
       const url = params.imageUrl;
       if (url.startsWith('data:')) {
-        // Support data URLs like data:image/png;base64,XXXXX
         const match = url.match(/^data:(.+?);base64,(.*)$/);
         if (match) {
           const [, mt, b64] = match;
@@ -412,17 +407,14 @@ class GeminiService {
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
         const mimeType = mime.lookup(url) || 'image/png';
-        imagePart = {
-          imageBytes: buffer.toString('base64'),
-          mimeType
-        };
-        console.log('Downloaded and processed image for video generation, size:', buffer.length, 'bytes');
+        imagePart = { imageBytes: buffer.toString('base64'), mimeType };
+        console.log('Downloaded image for video generation, size:', buffer.length, 'bytes');
       }
     } else {
       console.log('No image or video provided for video generation - text-to-video mode');
     }
 
-    // Step 1: kick off generation with optional image input
+    // Step 1: kick off generation with optional image or video input
     const requestParams = {
       model: 'veo-3.1-generate-preview',
       prompt: `You're an IQ 200 specialist in brand / product marketing. Never include font names, brand names, or technical specifications in the visual content. ${prompt}`,
@@ -430,11 +422,12 @@ class GeminiService {
         aspectRatio,
         ...(negativePrompt ? { negativePrompt } : {})
       },
-      ...(imagePart ? { image: imagePart } : {})
+      ...(videoPart ? { video: videoPart } : imagePart ? { image: imagePart } : {})
     };
     console.log('Veo3 request params:', JSON.stringify({
       ...requestParams,
-      image: requestParams.image ? `[image data: ${requestParams.image.mimeType}, ${requestParams.image.imageBytes?.length || 0} chars]` : undefined
+      image: requestParams.image ? `[image: ${requestParams.image.mimeType}, ${requestParams.image.imageBytes?.length || 0} chars]` : undefined,
+      video: requestParams.video ? `[video: ${requestParams.video.mimeType}, ${requestParams.video.videoBytes?.length || 0} chars]` : undefined
     }, null, 2));
     
     let operation = await this.genAI.models.generateVideos(requestParams);
@@ -590,7 +583,7 @@ class GeminiService {
       ];
 
       const response = await this.genAI.models.generateContentStream({
-        model: 'gemini-2.5-flash-image',
+        model: 'gemini-3.1-flash-image-preview',
         config,
         contents,
       });
@@ -708,7 +701,7 @@ class GeminiService {
       ];
 
       const response = await this.genAI.models.generateContentStream({
-        model: 'gemini-2.5-flash-image',
+        model: 'gemini-3.1-flash-image-preview',
         config,
         contents,
       });
