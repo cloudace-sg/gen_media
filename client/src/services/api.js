@@ -116,7 +116,8 @@ export const remixImages = async (prompt, images, purpose, aspectRatio = '16:9',
       images: images.map(img => ({
         id: img.id,
         url: img.url,
-        title: img.title
+        title: img.title,
+        mediaType: img.mediaType || 'image'
       }))
     });
     return response.data;

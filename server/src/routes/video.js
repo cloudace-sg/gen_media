@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
       console.warn('Brand placeholder replacement skipped:', e.message);
     }
 
-    const result = await gemini.generateVideoVeo3({ prompt: promptProcessed, negativePrompt, aspectRatio, resolution, personGeneration, imageUrl });
+    const result = await gemini.generateVideoVeo3({ prompt: promptProcessed, negativePrompt, aspectRatio, resolution, personGeneration, imageUrl, videoUrl });
 
     // If GCS is configured, upload resulting file to bucket and return its URL
     let videoUrl;

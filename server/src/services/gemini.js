@@ -97,6 +97,7 @@ class GeminiService {
     for (const img of images) {
       try {
         const url = img.url || '';
+        const isVideo = img.mediaType === 'video' || url.includes('.mp4') || url.includes('.webm') || url.includes('.mov');
         if (url.startsWith('data:')) {
           const m = url.match(/^data:(.+?);base64,(.*)$/);
           if (m) {
@@ -111,7 +112,7 @@ class GeminiService {
         }
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
-        const mimeType = mime.lookup(url) || 'image/jpeg';
+        const mimeType = mime.lookup(url) || (isVideo ? 'video/mp4' : 'image/jpeg');
 
         preparedImages.push({
           inlineData: {
@@ -120,8 +121,8 @@ class GeminiService {
           },
         });
       } catch (error) {
-        console.error(`Failed to download or process image from ${img.url}:`, error.message);
-        throw new Error(`Failed to process image for remix: ${img.url}`);
+        console.error(`Failed to download or process ${img.mediaType === 'video' ? 'video' : 'image'} from ${img.url}:`, error.message);
+        throw new Error(`Failed to process reference for remix: ${img.url}`);
       }
     }
     return preparedImages;

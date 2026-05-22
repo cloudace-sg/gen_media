@@ -298,13 +298,17 @@ const PromptDrawer = () => {
     if (!prompt.trim()) return;
     setLoading('generate', true);
     try {
-      const imageUrl = stagedImages.length > 0 ? stagedImages[0].url : undefined;
+      const ref = stagedImages.length > 0 ? stagedImages[0] : null;
+      const isVideoRef = ref && (ref.mediaType === 'video' || (ref.url && ref.url.includes('.mp4')));
+      const imageUrl = ref && !isVideoRef ? ref.url : undefined;
+      const videoUrl = ref && isVideoRef ? ref.url : undefined;
       const res = await generateVideo({ 
         prompt, 
         negativePrompt: negativePrompt || undefined,
         aspectRatio: videoSettings.aspectRatio, 
         resolution: videoSettings.resolution, 
         imageUrl,
+        videoUrl,
         styleId: videoSettings.styleId
       });
       const url = res?.url;

@@ -11,12 +11,7 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
 
   const handleVideoSelect = (item, e) => {
     e.stopPropagation();
-    const stageable = {
-      ...item,
-      url: item.thumbnail || item.url,
-      originalVideoUrl: item.url,
-    };
-    onImageSelect(stageable, e);
+    onImageSelect(item, e);
   };
 
   return (
