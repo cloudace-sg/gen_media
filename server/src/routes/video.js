@@ -8,11 +8,11 @@ const GeminiService = require('../services/gemini');
 let gemini = null; // lazy init to avoid crashing on import if env is missing
 
 // POST /api/video
-// Body: { prompt: string, negativePrompt?: string, aspectRatio?: '16:9'|'9:16', resolution?: '720p'|'1080p', personGeneration?: 'allow_all'|'allow_adult'|'dont_allow', imageUrl?: string }
+// Body: { prompt: string, negativePrompt?: string, aspectRatio?: '16:9'|'9:16', resolution?: '720p'|'1080p', personGeneration?: 'allow_all'|'allow_adult'|'dont_allow', imageUrl?: string, videoUrl?: string }
 router.post('/', async (req, res) => {
   try {
     if (!gemini) gemini = new GeminiService();
-    const { prompt, negativePrompt, aspectRatio, resolution, personGeneration, imageUrl } = req.body || {};
+    const { prompt, negativePrompt, aspectRatio, resolution, personGeneration, imageUrl, videoUrl } = req.body || {};
     
     // Set user ID for GCS storage
     const userId = req.get('x-user-id') || 'anonymous';
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
       console.warn('Brand placeholder replacement skipped:', e.message);
     }
 
-    const result = await gemini.generateVideoVeo3({ prompt: promptProcessed, negativePrompt, aspectRatio, resolution, personGeneration, imageUrl });
+    const result = await gemini.generateVideoVeo3({ prompt: promptProcessed, negativePrompt, aspectRatio, resolution, personGeneration, imageUrl, videoUrl });
 
     // If GCS is configured, upload resulting file to bucket and return its URL
     let videoUrl;
