@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 
-const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selectedImages = [] }) => {
+const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selectedImages = [], mediaType = 'image' }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
 
@@ -10,7 +10,7 @@ const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selecte
   };
 
   const handleImageError = () => {
-    console.error('Image failed to load:', image.thumbnail || image.url);
+    console.error('Media failed to load:', image.thumbnail || image.url);
     setImageLoading(false);
     setImageError(true);
   };
@@ -26,6 +26,9 @@ const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selecte
   };
 
   const getPlaceholderContent = () => {
+    if (mediaType === 'video') {
+      return '🎬';
+    }
     switch (rowType) {
       case 'search':
         return '🔍';
@@ -40,7 +43,7 @@ const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selecte
 
   // Get the reference number from the staged images array
   const stagedImage = selectedImages.find(staged => staged.id === image.id);
-  const refNumber = stagedImage?.ref ? stagedImage.ref.replace('@', '') : '';
+  const refNumber = stagedImage?.ref ? stagedImage.ref.replace('@', '').replace('video_', '') : '';
 
   return (
     <div 
@@ -64,6 +67,25 @@ const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selecte
           <div className="text-center">
             <div className="text-lg mb-1">{getPlaceholderContent()}</div>
             <div className="text-xs text-dark-text-secondary">Failed to load</div>
+          </div>
+        </div>
+      ) : mediaType === 'video' ? (
+        // Video thumbnail with play icon
+        <div className="relative w-full h-full bg-black">
+          <video
+            src={image.url}
+            className="w-full h-full object-cover"
+            onLoadedMetadata={handleImageLoad}
+            onError={handleImageError}
+            onClick={handleImageClick}
+            style={{ display: imageLoading ? 'none' : 'block' }}
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 group-hover:bg-opacity-40 transition-all">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center opacity-80 group-hover:opacity-100">
+              <svg className="w-5 h-5 text-black fill-current ml-0.5" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
           </div>
         </div>
       ) : (
@@ -102,7 +124,7 @@ const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selecte
         </div>
       )}
       
-      {/* Image info overlay */}
+      {/* Media info overlay */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <div className="text-white text-xs truncate">
           {image.title || 'Untitled'}
