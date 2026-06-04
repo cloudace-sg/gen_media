@@ -117,7 +117,7 @@ export const remixImages = async (prompt, images, purpose, aspectRatio = '16:9',
         id: img.id,
         url: img.url,
         title: img.title,
-        mediaType: img.mediaType || 'image'
+        mediaType: img.mediaType
       }))
     });
     return response.data;
@@ -127,7 +127,7 @@ export const remixImages = async (prompt, images, purpose, aspectRatio = '16:9',
 };
 
 // Video generation (Veo 3)
-export const generateVideo = async ({ prompt, negativePrompt, aspectRatio = '16:9', resolution = '720p', personGeneration, imageUrl, styleId }) => {
+export const generateVideo = async ({ prompt, negativePrompt, aspectRatio = '16:9', resolution = '720p', personGeneration, imageUrl, videoUrl, styleId }) => {
   try {
     const response = await api.post('/video', {
       prompt,
@@ -136,6 +136,7 @@ export const generateVideo = async ({ prompt, negativePrompt, aspectRatio = '16:
       resolution,
       personGeneration,
       imageUrl,
+      videoUrl,
       styleId
     });
     return response.data; // { url, filename, aspectRatio, resolution }

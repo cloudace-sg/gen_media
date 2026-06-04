@@ -298,15 +298,21 @@ const PromptDrawer = () => {
     if (!prompt.trim()) return;
     setLoading('generate', true);
     try {
-      const ref = stagedImages.length > 0 ? stagedImages[0] : null;
-      const isVideoRef = ref && (ref.mediaType === 'video' || (ref.url && ref.url.includes('.mp4')));
-      const imageUrl = ref && !isVideoRef ? ref.url : undefined;
-      const videoUrl = ref && isVideoRef ? ref.url : undefined;
-      const res = await generateVideo({ 
-        prompt, 
+      let imageUrl;
+      let videoUrl;
+      if (stagedImages.length > 0) {
+        const ref = stagedImages[0];
+        if (ref.mediaType === 'video') {
+          videoUrl = ref.url;
+        } else {
+          imageUrl = ref.url;
+        }
+      }
+      const res = await generateVideo({
+        prompt,
         negativePrompt: negativePrompt || undefined,
-        aspectRatio: videoSettings.aspectRatio, 
-        resolution: videoSettings.resolution, 
+        aspectRatio: videoSettings.aspectRatio,
+        resolution: videoSettings.resolution,
         imageUrl,
         videoUrl,
         styleId: videoSettings.styleId
