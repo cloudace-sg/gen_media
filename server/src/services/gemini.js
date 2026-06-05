@@ -5,6 +5,20 @@ const fs = require('fs');
 const path = require('path');
 const { uploadFile, uploadBuffer } = require('./storage');
 
+// Centralized model configuration.
+// Text and image models use the generateContent / generateContentStream API.
+// Video model uses the generateVideos API (long-running operation).
+//
+// When Gemini Omni Flash ships its developer API, it will likely replace the
+// video model — but note that Omni uses generateContent (not generateVideos),
+// so the video generation method will need a new implementation, not just an
+// ID swap. Add a parallel generateVideoOmni() method at that point.
+const MODELS = {
+  text:  'gemini-3.5-flash',               // prompt enhancement, improvement, random prompt, marketing prompt
+  image: 'gemini-3.1-flash-image-preview',  // image generation + remix (generateContentStream)
+  video: 'veo-3.1-generate-preview',        // video generation (generateVideos)
+};
+
 class GeminiService {
   constructor() {
     this.apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -74,7 +88,7 @@ class GeminiService {
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
           { role: 'user', parts: [{ text: `User prompt: ${prompt}` }] }
@@ -158,7 +172,7 @@ class GeminiService {
     ];
 
     const { candidates } = await this.genAI.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: MODELS.text,
       contents: [{ role: 'user', parts }],
       generationConfig: {
         temperature: 0.7,
@@ -295,7 +309,7 @@ class GeminiService {
     ];
 
     const { candidates } = await this.genAI.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: MODELS.text,
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.9, maxOutputTokens: 200 }
     });
@@ -342,7 +356,7 @@ class GeminiService {
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
           { role: 'user', parts: [{ text: `User prompt: ${prompt}` }] }
@@ -425,7 +439,7 @@ class GeminiService {
 
     // Step 1: kick off generation with optional image or video input
     const requestParams = {
-      model: 'veo-3.1-generate-preview',
+      model: MODELS.video,
       prompt: `You're an IQ 200 specialist in brand / product marketing. Never include font names, brand names, or technical specifications in the visual content. ${prompt}`,
       config: {
         aspectRatio,
@@ -592,7 +606,7 @@ class GeminiService {
       ];
 
       const response = await this.genAI.models.generateContentStream({
-        model: 'gemini-3.1-flash-image-preview',
+        model: MODELS.image,
         config,
         contents,
       });
@@ -710,7 +724,7 @@ class GeminiService {
       ];
 
       const response = await this.genAI.models.generateContentStream({
-        model: 'gemini-3.1-flash-image-preview',
+        model: MODELS.image,
         config,
         contents,
       });
@@ -817,7 +831,7 @@ Transform this into a high-precision marketing prompt. If an aspect ratio is pro
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemPrompt }] },
           { role: 'user', parts: [{ text: userMessage }] }
