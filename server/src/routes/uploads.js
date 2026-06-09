@@ -43,14 +43,17 @@ const storage = useGcs
       }
     });
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Unsupported file type'));
+    if (ALLOWED_TYPES.includes(file.mimetype)) cb(null, true);
+    else cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed: images (JPEG, PNG, WebP) and videos (MP4, WebM, MOV)`));
   },
-  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+  limits: { fileSize: 200 * 1024 * 1024 } // 200MB for video support
 });
 
 router.post('/', (req, res, next) => {
@@ -79,62 +82,72 @@ router.post('/', (req, res, next) => {
     const userId = req.get('x-user-id') || 'anonymous';
     const companyId = req.get('x-company-id') || 'public';
     for (const file of files) {
+      const isVideo = ALLOWED_VIDEO_TYPES.includes(file.mimetype);
+
       if (useGcs) {
         try {
-          // Memory storage path
           const now = new Date();
           const y = now.getFullYear();
           const m = String(now.getMonth() + 1).padStart(2, '0');
           const timestamp = Date.now();
           const sanitized = (file.originalname || 'upload').replace(/[^a-zA-Z0-9_.-]/g, '_');
-          const ext = path.extname(sanitized) || (file.mimetype === 'image/png' ? '.png' : (file.mimetype === 'image/webp' ? '.webp' : '.jpg'));
+          const ext = path.extname(sanitized) || (isVideo ? '.mp4' : (file.mimetype === 'image/png' ? '.png' : (file.mimetype === 'image/webp' ? '.webp' : '.jpg')));
           const base = path.basename(sanitized, ext);
-          const key = `users/${userId}/uploads/${y}/${m}/${timestamp}_${base}${ext}`;
-          const thumbKey = `users/${userId}/uploads/${y}/${m}/${timestamp}_${base}_thumb${ext}`;
-
-          const imgMeta = await sharp(file.buffer).metadata();
-          const thumbBuf = await sharp(file.buffer).resize({ width: THUMB_MAX_WIDTH, withoutEnlargement: true }).toBuffer();
+          const subfolder = isVideo ? 'uploads/videos' : 'uploads';
+          const key = `users/${userId}/${subfolder}/${y}/${m}/${timestamp}_${base}${ext}`;
           const nowIso = new Date().toISOString();
           const url = await uploadBuffer(file.buffer, key, file.mimetype, { customTime: nowIso });
-          const thumbUrl = await uploadBuffer(thumbBuf, thumbKey, file.mimetype, { customTime: nowIso });
 
-          results.push({
+          const result = {
             id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             title: file.originalname,
             url,
-            thumbnail: thumbUrl,
+            thumbnail: url,
             source: 'Uploaded',
-            width: imgMeta.width || null,
-            height: imgMeta.height || null
-          });
+          };
+
+          if (isVideo) {
+            result.mediaType = 'video';
+          } else {
+            const imgMeta = await sharp(file.buffer).metadata();
+            result.width = imgMeta.width || null;
+            result.height = imgMeta.height || null;
+            const thumbKey = `users/${userId}/${subfolder}/${y}/${m}/${timestamp}_${base}_thumb${ext}`;
+            const thumbBuf = await sharp(file.buffer).resize({ width: THUMB_MAX_WIDTH, withoutEnlargement: true }).toBuffer();
+            result.thumbnail = await uploadBuffer(thumbBuf, thumbKey, file.mimetype, { customTime: nowIso });
+          }
+
+          results.push(result);
         } catch (gcsError) {
           console.warn('GCS upload failed, falling back to local storage:', gcsError.message);
-          // Fall back to local storage - save buffer to disk first
           const timestamp = Date.now();
           const sanitized = (file.originalname || 'upload').replace(/[^a-zA-Z0-9_.-]/g, '_');
-          const ext = path.extname(sanitized) || (file.mimetype === 'image/png' ? '.png' : (file.mimetype === 'image/webp' ? '.webp' : '.jpg'));
+          const ext = path.extname(sanitized) || (isVideo ? '.mp4' : (file.mimetype === 'image/png' ? '.png' : (file.mimetype === 'image/webp' ? '.webp' : '.jpg')));
           const base = path.basename(sanitized, ext);
           const filename = `${timestamp}_${base}${ext}`;
-          const thumbName = `${timestamp}_${base}_thumb${ext}`;
           const filePath = path.join(UPLOAD_DIR, filename);
-          const thumbPath = path.join(UPLOAD_DIR, thumbName);
-          
+
           try {
-            // Save buffer to disk
             await fs.promises.writeFile(filePath, file.buffer);
-            
-            const metadata = await sharp(file.buffer).metadata();
-            const width = metadata.width || null;
-            const height = metadata.height || null;
-            await sharp(file.buffer).resize({ width: THUMB_MAX_WIDTH, withoutEnlargement: true }).toFile(thumbPath);
-            results.push({
+            const result = {
               id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
               title: file.originalname,
               url: `${host}/uploads/${filename}`,
-              thumbnail: `${host}/uploads/${thumbName}`,
+              thumbnail: `${host}/uploads/${filename}`,
               source: 'Uploaded',
-              width, height
-            });
+            };
+            if (isVideo) {
+              result.mediaType = 'video';
+            } else {
+              const metadata = await sharp(file.buffer).metadata();
+              result.width = metadata.width || null;
+              result.height = metadata.height || null;
+              const thumbName = `${timestamp}_${base}_thumb${ext}`;
+              const thumbPath = path.join(UPLOAD_DIR, thumbName);
+              await sharp(file.buffer).resize({ width: THUMB_MAX_WIDTH, withoutEnlargement: true }).toFile(thumbPath);
+              result.thumbnail = `${host}/uploads/${thumbName}`;
+            }
+            results.push(result);
           } catch (err) {
             console.error('Local fallback failed:', err);
             results.push({
@@ -142,40 +155,39 @@ router.post('/', (req, res, next) => {
               title: file.originalname,
               url: `${host}/uploads/${filename}`,
               thumbnail: `${host}/uploads/${filename}`,
-              source: 'Uploaded'
+              source: 'Uploaded',
+              ...(isVideo ? { mediaType: 'video' } : {})
             });
           }
         }
       } else {
-        // Disk fallback for local dev
         console.log('Processing file:', file.filename, 'at', file.path);
         const inputPath = file.path;
         const ext = path.extname(file.filename);
         const base = path.basename(file.filename, ext);
-        const thumbName = `${base}_thumb${ext}`;
-        const thumbPath = path.join(UPLOAD_DIR, thumbName);
-        try {
-          const metadata = await sharp(inputPath).metadata();
-          const width = metadata.width || null;
-          const height = metadata.height || null;
-          await sharp(inputPath).resize({ width: THUMB_MAX_WIDTH, withoutEnlargement: true }).toFile(thumbPath);
-          results.push({
-            id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            title: file.originalname,
-            url: `${host}/uploads/${file.filename}`,
-            thumbnail: `${host}/uploads/${thumbName}`,
-            source: 'Uploaded',
-            width, height
-          });
-        } catch (err) {
-          results.push({
-            id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            title: file.originalname,
-            url: `${host}/uploads/${file.filename}`,
-            thumbnail: `${host}/uploads/${file.filename}`,
-            source: 'Uploaded'
-          });
+        const result = {
+          id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          title: file.originalname,
+          url: `${host}/uploads/${file.filename}`,
+          thumbnail: `${host}/uploads/${file.filename}`,
+          source: 'Uploaded',
+        };
+        if (isVideo) {
+          result.mediaType = 'video';
+        } else {
+          try {
+            const metadata = await sharp(inputPath).metadata();
+            result.width = metadata.width || null;
+            result.height = metadata.height || null;
+            const thumbName = `${base}_thumb${ext}`;
+            const thumbPath = path.join(UPLOAD_DIR, thumbName);
+            await sharp(inputPath).resize({ width: THUMB_MAX_WIDTH, withoutEnlargement: true }).toFile(thumbPath);
+            result.thumbnail = `${host}/uploads/${thumbName}`;
+          } catch (err) {
+            // thumbnail generation failed, use original
+          }
         }
+        results.push(result);
       }
     }
 

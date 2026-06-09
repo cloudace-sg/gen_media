@@ -227,7 +227,7 @@ const PromptDrawer = () => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     setLoading('upload', true);
-    addRow({ type: 'upload', title: 'UPLOADED IMAGES', images: [], loading: true });
+    addRow({ type: 'upload', title: 'UPLOADS', images: [], loading: true });
     try {
       const { results } = await uploadImages(files);
       const state = useStore.getState();
@@ -235,7 +235,7 @@ const PromptDrawer = () => {
       if (lastRow && lastRow.type === 'upload' && lastRow.loading) {
         state.updateRow(lastRow.id, { images: results, loading: false });
       } else {
-        addRow({ type: 'upload', title: 'UPLOADED IMAGES', images: results });
+        addRow({ type: 'upload', title: 'UPLOADS', images: results });
       }
     } finally {
       setLoading('upload', false);
@@ -348,7 +348,7 @@ const PromptDrawer = () => {
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
               <button onClick={() => setIsSearchMode(true)} className={`px-4 h-10 rounded-md text-sm ${isSearchMode ? 'bg-accent text-black' : 'bg-dark-border text-dark-text hover:bg-gray-200'}`}>Search</button>
-              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleFilesSelected} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple onChange={handleFilesSelected} className="hidden" />
               <button onClick={handleUploadClick} className="px-4 h-10 rounded-lg bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-2 text-sm"><UploadIcon className="w-5 h-5" /><span>Upload</span></button>
             </div>
             <button onClick={() => setIsSearchMode(false)} className={`px-4 h-10 rounded-md text-sm w-fit ${!isSearchMode ? 'bg-accent text-black' : 'bg-dark-border text-dark-text hover:bg-gray-200'}`}>Create</button>
