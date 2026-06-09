@@ -318,7 +318,11 @@ const PromptDrawer = () => {
         styleId: videoSettings.styleId
       });
       const url = res?.url;
-      if (url) addRow({ type: 'video', title: 'VIDEO', images: [{ id: `video_${Date.now()}`, title: `Video: ${prompt}`, url, source: 'AI Generated (Veo 3)', mediaType: 'video' }], prompt });
+      if (url) {
+        const row = { type: 'video', title: 'VIDEO', images: [{ id: `video_${Date.now()}`, title: `Video: ${prompt}`, url, source: 'AI Generated (Veo 3)', mediaType: 'video' }], prompt };
+        if (res.warning) row.warning = res.warning;
+        addRow(row);
+      }
       setPrompt('');
     } finally { setLoading('generate', false); }
   };

@@ -398,8 +398,11 @@ class GeminiService {
     const personGeneration = params.personGeneration || undefined;
 
     // Optional: load image/video bytes if imageUrl or videoUrl provided
+    const VIDEO_REF_WARN_BYTES = 20 * 1024 * 1024;  // 20MB — soft warning
+    const VIDEO_REF_MAX_BYTES = 100 * 1024 * 1024;   // 100MB — hard cap
     let imagePart = undefined;
     let videoPart = undefined;
+    let videoRefWarning = undefined;
     if (params.videoUrl) {
       console.log('Processing video reference for video generation:', params.videoUrl);
       const url = params.videoUrl;
@@ -407,12 +410,27 @@ class GeminiService {
         const match = url.match(/^data:(.+?);base64,(.*)$/);
         if (match) {
           const [, mt, b64] = match;
+          const sizeBytes = Math.ceil(b64.length * 3 / 4);
+          if (sizeBytes > VIDEO_REF_MAX_BYTES) {
+            throw new Error(`Video reference is too large (${(sizeBytes / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter or lower-resolution clip.`);
+          }
+          if (sizeBytes > VIDEO_REF_WARN_BYTES) {
+            videoRefWarning = `Video reference is ${(sizeBytes / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
+            console.warn(videoRefWarning);
+          }
           videoPart = { videoBytes: b64, mimeType: mt };
           console.log('Using data URL video for video generation');
         }
       } else {
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
+        if (buffer.length > VIDEO_REF_MAX_BYTES) {
+          throw new Error(`Video reference is too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter or lower-resolution clip.`);
+        }
+        if (buffer.length > VIDEO_REF_WARN_BYTES) {
+          videoRefWarning = `Video reference is ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
+          console.warn(videoRefWarning);
+        }
         videoPart = { videoBytes: buffer.toString('base64'), mimeType: 'video/mp4' };
         console.log('Downloaded video reference for video generation, size:', buffer.length, 'bytes');
       }
@@ -575,7 +593,7 @@ class GeminiService {
       throw new Error(`Failed to download video: ${downloadError.message}`);
     }
 
-    return { filename, filepath, aspectRatio, resolution };
+    return { filename, filepath, aspectRatio, resolution, videoRefWarning };
   }
 
   /**

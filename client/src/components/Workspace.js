@@ -162,6 +162,13 @@ const Workspace = () => {
               selectedImages={stagedImages}
             />
 
+            {/* Warning (e.g. large video reference) */}
+            {row.warning && (
+              <div className="mt-2 px-3 py-2 bg-yellow-900/30 border border-yellow-700/50 rounded-lg text-xs text-yellow-300">
+                ⚠️ {row.warning}
+              </div>
+            )}
+
             {/* Prompt (truncated) */}
             {row.prompt && (
               <div className="mt-3">
