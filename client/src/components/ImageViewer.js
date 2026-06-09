@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Download, ZoomIn, ZoomOut, RotateCw, Move, Edit3 } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCw, Move, Edit3, Plus } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 // Lazy-load CanvasEditor (Konva)
@@ -19,7 +19,7 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
   const [retryCrossOrigin, setRetryCrossOrigin] = useState(true);
   const containerRef = useRef(null);
   const imageRef = useRef(null);
-  const { overlaysByAssetId, updateRow, getImageById, setLoading, isLoading, clearOverlays } = useStore();
+  const { overlaysByAssetId, updateRow, getImageById, setLoading, isLoading, clearOverlays, stageImage, unstageImage, stagedImages } = useStore();
 
   const cacheBust = (url) => {
     try {
@@ -133,14 +133,46 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
   }, [isEditMode]);
 
   if (!image) return null;
+  const isStaged = image && stagedImages.some(s => s.id === image.id);
+
+  const handleToggleStage = () => {
+    if (!image) return;
+    if (isStaged) {
+      unstageImage(image.id);
+    } else {
+      stageImage({
+        id: image.id,
+        title: image.title,
+        url: image.url,
+        thumbnail: image.thumbnail || image.url,
+        source: image.source,
+        mediaType: image.mediaType,
+      });
+    }
+  };
+
   if (image.mediaType === 'video') {
     return (
       <div className="fixed top-0 right-0 bottom-24 w-1/2 bg-dark-surface border-l border-dark-border z-40 flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <h3 className="font-semibold text-dark-text truncate max-w-xs">{image.title || 'Video'}</h3>
-          <button onClick={onClose} className="p-2 text-dark-text-secondary hover:text-red-400 transition-colors" title="Close viewer">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToggleStage}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm transition-colors ${
+                isStaged
+                  ? 'bg-accent text-black hover:bg-red-500 hover:text-white'
+                  : 'bg-dark-border text-dark-text hover:bg-accent hover:text-black'
+              }`}
+              title={isStaged ? 'Remove from references' : 'Use as reference'}
+            >
+              {isStaged ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+              {isStaged ? 'Remove ref' : 'Use as ref'}
+            </button>
+            <button onClick={onClose} className="p-2 text-dark-text-secondary hover:text-red-400 transition-colors" title="Close viewer">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 bg-black flex items-center justify-center">
           <video 
@@ -299,6 +331,18 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
           </span>
         </div>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleToggleStage}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm transition-colors ${
+              isStaged
+                ? 'bg-accent text-black hover:bg-red-500 hover:text-white'
+                : 'bg-dark-border text-dark-text hover:bg-accent hover:text-black'
+            }`}
+            title={isStaged ? 'Remove from references' : 'Use as reference'}
+          >
+            {isStaged ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {isStaged ? 'Remove ref' : 'Use as ref'}
+          </button>
           <button
             onClick={onPrevious}
             disabled={!hasPrevious}
