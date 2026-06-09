@@ -51,13 +51,17 @@ router.post('/', async (req, res) => {
       outputUrl = `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}/uploads/${filename}`;
     }
 
-    res.json({
+    const response = {
       prompt: promptProcessed,
       aspectRatio: result.aspectRatio,
       resolution: result.resolution,
       url: outputUrl,
       filename: path.basename(outputUrl)
-    });
+    };
+    if (result.videoRefWarning) {
+      response.warning = result.videoRefWarning;
+    }
+    res.json(response);
   } catch (err) {
     console.error('Video generation error:', err.message);
     console.error('Full error:', err);
