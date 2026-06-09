@@ -300,12 +300,19 @@ const PromptDrawer = () => {
     try {
       let imageUrl;
       let videoUrl;
+      let referenceImageUrls;
       if (stagedImages.length > 0) {
-        const ref = stagedImages[0];
-        if (ref.mediaType === 'video') {
-          videoUrl = ref.url;
-        } else {
-          imageUrl = ref.url;
+        const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
+        const videoRefs = stagedImages.filter(r => r.mediaType === 'video');
+
+        if (imageRefs.length > 1) {
+          referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
+        } else if (imageRefs.length === 1 && videoRefs.length === 0) {
+          imageUrl = imageRefs[0].url;
+        }
+
+        if (videoRefs.length > 0 && !referenceImageUrls) {
+          videoUrl = videoRefs[0].url;
         }
       }
       const res = await generateVideo({
@@ -315,6 +322,7 @@ const PromptDrawer = () => {
         resolution: videoSettings.resolution,
         imageUrl,
         videoUrl,
+        referenceImageUrls,
         styleId: videoSettings.styleId
       });
       const url = res?.url;

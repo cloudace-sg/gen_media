@@ -397,13 +397,44 @@ class GeminiService {
     const negativePrompt = params.negativePrompt || undefined;
     const personGeneration = params.personGeneration || undefined;
 
-    // Optional: load image/video bytes if imageUrl or videoUrl provided
+    // Optional: load reference assets
     const VIDEO_REF_WARN_BYTES = 20 * 1024 * 1024;  // 20MB — soft warning
     const VIDEO_REF_MAX_BYTES = 100 * 1024 * 1024;   // 100MB — hard cap
+    const IMAGE_REF_MAX_BYTES = 20 * 1024 * 1024;    // 20MB per image (Veo limit)
     let imagePart = undefined;
     let videoPart = undefined;
+    let referenceImageParts = undefined;
     let videoRefWarning = undefined;
-    if (params.videoUrl) {
+
+    // Priority: referenceImageUrls (Ingredients to Video) > videoUrl (scene extension) > imageUrl (first frame)
+    if (Array.isArray(params.referenceImageUrls) && params.referenceImageUrls.length > 0) {
+      const urls = params.referenceImageUrls.slice(0, 3);
+      console.log(`Processing ${urls.length} reference image(s) for Ingredients to Video`);
+      referenceImageParts = [];
+      for (const url of urls) {
+        let imageData;
+        if (url.startsWith('data:')) {
+          const match = url.match(/^data:(.+?);base64,(.*)$/);
+          if (match) {
+            imageData = { imageBytes: match[2], mimeType: match[1] };
+          }
+        } else {
+          const response = await axios.get(url, { responseType: 'arraybuffer' });
+          const buffer = Buffer.from(response.data);
+          if (buffer.length > IMAGE_REF_MAX_BYTES) {
+            console.warn(`Reference image ${url} is ${(buffer.length / 1024 / 1024).toFixed(1)}MB (max ${IMAGE_REF_MAX_BYTES / 1024 / 1024}MB), skipping`);
+            continue;
+          }
+          const mimeType = mime.lookup(url) || 'image/png';
+          imageData = { imageBytes: buffer.toString('base64'), mimeType };
+        }
+        if (imageData) {
+          referenceImageParts.push({ image: imageData, referenceType: 'asset' });
+          console.log(`Prepared reference image: ${url.substring(0, 80)}...`);
+        }
+      }
+      if (referenceImageParts.length === 0) referenceImageParts = undefined;
+    } else if (params.videoUrl) {
       console.log('Processing video reference for video generation:', params.videoUrl);
       const url = params.videoUrl;
       if (url.startsWith('data:')) {
@@ -455,20 +486,27 @@ class GeminiService {
       console.log('No image or video provided for video generation - text-to-video mode');
     }
 
-    // Step 1: kick off generation with optional image or video input
+    // Step 1: kick off generation with optional image/video/reference input
     const requestParams = {
       model: MODELS.video,
       prompt: `You're an IQ 200 specialist in brand / product marketing. Never include font names, brand names, or technical specifications in the visual content. ${prompt}`,
       config: {
         aspectRatio,
-        ...(negativePrompt ? { negativePrompt } : {})
+        ...(negativePrompt ? { negativePrompt } : {}),
+        ...(referenceImageParts ? { referenceImages: referenceImageParts } : {})
       },
-      ...(videoPart ? { video: videoPart } : imagePart ? { image: imagePart } : {})
+      ...(videoPart ? { video: videoPart } : !referenceImageParts && imagePart ? { image: imagePart } : {})
     };
+    const mode = referenceImageParts ? `ingredients (${referenceImageParts.length} refs)` : videoPart ? 'scene extension' : imagePart ? 'image-to-video' : 'text-to-video';
+    console.log(`Veo3 generation mode: ${mode}`);
     console.log('Veo3 request params:', JSON.stringify({
       ...requestParams,
       image: requestParams.image ? `[image: ${requestParams.image.mimeType}, ${requestParams.image.imageBytes?.length || 0} chars]` : undefined,
-      video: requestParams.video ? `[video: ${requestParams.video.mimeType}, ${requestParams.video.videoBytes?.length || 0} chars]` : undefined
+      video: requestParams.video ? `[video: ${requestParams.video.mimeType}, ${requestParams.video.videoBytes?.length || 0} chars]` : undefined,
+      config: {
+        ...requestParams.config,
+        referenceImages: requestParams.config.referenceImages ? `[${requestParams.config.referenceImages.length} reference(s)]` : undefined
+      }
     }, null, 2));
     
     let operation = await this.genAI.models.generateVideos(requestParams);
