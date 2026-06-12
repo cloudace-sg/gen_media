@@ -91,12 +91,10 @@ export const searchVideos = async (query, start = 1, num = 10) => {
   }
 };
 
-// Generate API
-export const generateImages = async (prompt, purpose, imageCount = 1, aspectRatio = '16:9', styleId) => {
+// Generate API — POST so long prompts and reference images are supported
+export const generateImages = async (prompt, purpose, imageCount = 1, aspectRatio = '16:9', styleId, referenceImages = []) => {
   try {
-    const response = await api.get('/generate', {
-      params: { prompt, purpose, imageCount, aspectRatio, styleId }
-    });
+    const response = await api.post('/generate', { prompt, purpose, imageCount, aspectRatio, styleId, referenceImages });
     return response.data;
   } catch (error) {
     console.error('Generate images error:', error);
@@ -211,6 +209,12 @@ export const saveEditedImage = async ({ dataUrl, originalUrl, replaceOriginal = 
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to save edited image');
   }
+};
+
+// Proxy an external image URL into local/GCS storage (used for search results)
+export const saveImageUrl = async (url) => {
+  const res = await api.post('/uploads/save-url', { url });
+  return res.data; // { id, url, thumbnail, source, mediaType }
 };
 
 // Health check

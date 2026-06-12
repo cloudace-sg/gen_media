@@ -1,12 +1,48 @@
 import React from 'react';
-import { X, Search, Sparkles, Palette, Film } from 'lucide-react';
+import { X, Search, Sparkles, Palette, Film, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { saveImageUrl } from '../services/api';
 import ImageRow from './ImageRow';
 
 const Workspace = () => {
-  const { rows, removeRow, stagedImages, stageImage, unstageImage, openImageViewer, brandAssets, isBrandKitComplete, openBrandKitModal } = useStore();
+  const { rows, removeRow, stagedImages, stageImage, unstageImage, openImageViewer, brandAssets, isBrandKitComplete, openBrandKitModal, updateRow } = useStore();
   const hasBrandAssets = (brandAssets?.logos?.length || 0) > 0;
   const brandComplete = isBrandKitComplete();
+  const [savingRows, setSavingRows] = React.useState({});
+
+  // For search results: proxy the external URL to a local/GCS URL before staging
+  const handleStageSearchImage = async (image) => {
+    const isStaged = stagedImages.some(s => s.id === image.id);
+    if (isStaged) { unstageImage(image.id); return; }
+    const isExternal = image.url && !image.url.startsWith('http://localhost') && !image.url.startsWith('https://localhost') && !image.url.startsWith('/') && !image.url.startsWith('data:') && !image.url.includes(window.location.hostname);
+    if (isExternal) {
+      try {
+        const saved = await saveImageUrl(image.url);
+        stageImage({ ...image, id: saved.id || image.id, url: saved.url, thumbnail: saved.thumbnail || saved.url });
+        return;
+      } catch (_) { /* fall through to stage with original */ }
+    }
+    stageImage(image);
+  };
+
+  // Save all images in a search row to My Files
+  const handleSaveRowToFiles = async (row) => {
+    setSavingRows(prev => ({ ...prev, [row.id]: true }));
+    const images = row.images || [];
+    const updated = [...images];
+    for (let i = 0; i < updated.length; i++) {
+      const img = updated[i];
+      const isExternal = img.url && !img.url.startsWith('http://localhost') && !img.url.startsWith('https://localhost') && !img.url.startsWith('/') && !img.url.startsWith('data:') && !img.url.includes(window.location.hostname);
+      if (isExternal) {
+        try {
+          const saved = await saveImageUrl(img.url);
+          updated[i] = { ...img, id: saved.id || img.id, url: saved.url, thumbnail: saved.thumbnail || saved.url, source: 'Saved from search' };
+        } catch (_) { /* keep original on failure */ }
+      }
+    }
+    updateRow(row.id, { images: updated });
+    setSavingRows(prev => ({ ...prev, [row.id]: false }));
+  };
 
   const getRowIcon = (type) => {
     switch (type) {
@@ -136,27 +172,41 @@ const Workspace = () => {
                 )}
               </div>
               
-              <button
-                onClick={() => removeRow(row.id)}
-                className="text-dark-text-secondary hover:text-red-400 transition-colors p-1"
-                title="Remove this row"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {row.type === 'search' && (
+                  <button
+                    onClick={() => handleSaveRowToFiles(row)}
+                    disabled={savingRows[row.id]}
+                    className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-dark-border text-dark-text hover:bg-gray-200 disabled:opacity-50"
+                    title="Save all to My Files"
+                  >
+                    <Save className="h-3 w-3" />
+                    {savingRows[row.id] ? 'Saving…' : 'Save to My Files'}
+                  </button>
+                )}
+                <button
+                  onClick={() => removeRow(row.id)}
+                  className="text-dark-text-secondary hover:text-red-400 transition-colors p-1"
+                  title="Remove this row"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            
+
             {/* Image Row */}
-            <ImageRow 
-              images={row.images || []} 
+            <ImageRow
+              images={row.images || []}
               rowId={row.id}
               rowType={row.type}
               onImageClick={(image) => openImageViewer(image, row.images || [])}
               onImageSelect={(image, e) => {
-                const isStaged = stagedImages.some(staged => staged.id === image.id);
-                if (isStaged) {
-                  unstageImage(image.id);
+                if (row.type === 'search') {
+                  handleStageSearchImage(image);
                 } else {
-                  stageImage(image);
+                  const isStaged = stagedImages.some(staged => staged.id === image.id);
+                  if (isStaged) unstageImage(image.id);
+                  else stageImage(image);
                 }
               }}
               selectedImages={stagedImages}

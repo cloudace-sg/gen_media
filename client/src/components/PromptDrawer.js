@@ -103,6 +103,7 @@ const PromptDrawer = () => {
   const [improved, setImproved] = useState(null); // { improvedPrompt, negativePrompt, rationale }
   const [negativePrompt, setNegativePrompt] = useState('');
   const [isRandomizing, setIsRandomizing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [styles, setStyles] = useState([{ id: 'freeform', label: 'Freeform', description: 'No preset' }]);
   useEffect(() => {
     (async () => {
@@ -246,6 +247,7 @@ const PromptDrawer = () => {
   const handleSearch = async () => {
     if (!prompt.trim()) return;
     setLoading('search', true);
+    setErrorMsg('');
     try {
       let results;
       if (outputMode === 'video') {
@@ -256,47 +258,45 @@ const PromptDrawer = () => {
         addRow({ type: 'search', title: 'SEARCH', images: results.results, query: prompt, licenseInfo: results.licenseInfo });
       }
       setPrompt('');
+    } catch (error) {
+      console.error('Search failed:', error);
+      setErrorMsg(error.message || 'Search failed. Check that image search API keys are configured.');
     } finally { setLoading('search', false); }
   };
 
+  // Unified generate handler — uses staged references when present (calls POST /generate with refs)
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setLoading('generate', true);
+    setErrorMsg('');
     try {
       const totalCount = Number(generationSettings.imageCount) || 1;
-      const res = await generateImages(prompt, generationSettings.style, totalCount, generationSettings.aspectRatio, generationSettings.styleId);
-      addRow({ type: 'generate', title: `GENERATE${totalCount > 1 ? ` (${totalCount})` : ''}`, images: res.results, prompt, generation: { purpose: generationSettings.style, imageCount: totalCount } });
+      const refs = stagedImages.map(img => ({ id: img.id, url: img.url, title: img.title, mediaType: img.mediaType }));
+      const res = await generateImages(prompt, generationSettings.style, totalCount, generationSettings.aspectRatio, generationSettings.styleId, refs);
+      const images = Array.isArray(res.results) && res.results.length > 0 ? res.results : [res.result].filter(Boolean);
+      const hasRefs = refs.length > 0;
+      addRow({
+        type: hasRefs ? 'remix' : 'generate',
+        title: hasRefs ? `GENERATE WITH REFS${totalCount > 1 ? ` (${totalCount})` : ''}` : `GENERATE${totalCount > 1 ? ` (${totalCount})` : ''}`,
+        images,
+        prompt,
+        generation: { purpose: generationSettings.style, imageCount: totalCount },
+        ...(hasRefs ? { sourceImages: stagedImages } : {})
+      });
       setPrompt('');
+      if (hasRefs) clearStagedImages();
     } catch (error) {
       console.error('Generation failed:', error);
+      setErrorMsg(error.message || 'Generation failed. Please try again.');
     } finally {
       setLoading('generate', false);
     }
   };
 
-  const handleRemix = async () => {
-    if (!prompt.trim() || stagedImages.length === 0) return;
-    setLoading('remix', true);
-    try {
-      const totalCount = Number(generationSettings.imageCount) || 1;
-      const results = await remixImages(
-        prompt,
-        stagedImages,
-        generationSettings.style,
-        generationSettings.aspectRatio,
-        totalCount,
-        generationSettings.styleId
-      );
-      const images = Array.isArray(results.results) && results.results.length > 0 ? results.results : [results.result].filter(Boolean);
-      addRow({ type: 'remix', title: `REMIX${totalCount > 1 ? ` (${totalCount})` : ''}`, images, prompt, generation: { purpose: generationSettings.style, imageCount: totalCount }, sourceImages: stagedImages });
-      setPrompt('');
-      clearStagedImages();
-    } finally { setLoading('remix', false); }
-  };
-
   const handleGenerateVideo = async () => {
     if (!prompt.trim()) return;
     setLoading('generate', true);
+    setErrorMsg('');
     try {
       let imageUrl;
       let videoUrl;
@@ -332,14 +332,16 @@ const PromptDrawer = () => {
         addRow(row);
       }
       setPrompt('');
+    } catch (error) {
+      console.error('Video generation failed:', error);
+      setErrorMsg(error.message || 'Video generation failed. Please try again.');
     } finally { setLoading('generate', false); }
   };
 
   const handleCreate = async () => {
     if (isSearchMode) return handleSearch();
     if (outputMode === 'video') return handleGenerateVideo();
-    if (stagedImages.length === 0) return handleGenerate();
-    return handleRemix();
+    return handleGenerate(); // handles both with and without refs via POST /generate
   };
 
   return (
@@ -761,6 +763,12 @@ const PromptDrawer = () => {
 
       {/* Fixed Create button at bottom */}
       <div className="p-3 border-t border-dark-border bg-dark-surface">
+        {errorMsg && (
+          <div className="mb-2 px-3 py-2 bg-red-900/40 border border-red-700/50 rounded-lg text-xs text-red-300 flex items-start gap-2">
+            <span className="flex-1">{errorMsg}</span>
+            <button onClick={() => setErrorMsg('')} className="text-red-400 hover:text-red-200 flex-shrink-0">✕</button>
+          </div>
+        )}
         <button 
           type="button" 
           onClick={handleCreate} 

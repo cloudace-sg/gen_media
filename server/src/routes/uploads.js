@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const axios = require('axios');
 const { uploadBuffer } = require('../services/storage');
 const sharp = require('sharp');
 
@@ -198,6 +199,60 @@ router.post('/', (req, res, next) => {
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Upload failed', message: error.message });
+  }
+});
+
+// POST /api/uploads/save-url — proxy an external image/video URL into local or GCS storage
+router.post('/save-url', async (req, res) => {
+  try {
+    const { url } = req.body || {};
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ error: 'url required' });
+    }
+    const userId = req.get('x-user-id') || 'anonymous';
+    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    const host = `${protocol}://${req.get('host')}`;
+
+    const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 });
+    const buffer = Buffer.from(response.data);
+    const contentType = response.headers['content-type']?.split(';')[0]?.trim() || 'image/jpeg';
+    const isVideo = contentType.startsWith('video/');
+    const ext = isVideo ? '.mp4' : (contentType === 'image/png' ? '.png' : (contentType === 'image/webp' ? '.webp' : '.jpg'));
+    const timestamp = Date.now();
+    const filename = `search_${timestamp}${ext}`;
+
+    if (useGcs) {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const subfolder = isVideo ? 'uploads/videos' : 'uploads';
+      const key = `users/${userId}/${subfolder}/${y}/${m}/${filename}`;
+      const savedUrl = await uploadBuffer(buffer, key, contentType, { customTime: new Date().toISOString() });
+      return res.json({
+        id: `upload_${timestamp}`,
+        title: filename,
+        url: savedUrl,
+        thumbnail: savedUrl,
+        source: 'Saved from search',
+        mediaType: isVideo ? 'video' : 'image',
+      });
+    }
+
+    await fs.promises.mkdir(UPLOAD_DIR, { recursive: true });
+    const filePath = path.join(UPLOAD_DIR, filename);
+    await fs.promises.writeFile(filePath, buffer);
+    const localUrl = `${host}/uploads/${filename}`;
+    return res.json({
+      id: `upload_${timestamp}`,
+      title: filename,
+      url: localUrl,
+      thumbnail: localUrl,
+      source: 'Saved from search',
+      mediaType: isVideo ? 'video' : 'image',
+    });
+  } catch (e) {
+    console.error('save-url error:', e);
+    res.status(500).json({ error: 'Failed to save image', message: e.message });
   }
 });
 
