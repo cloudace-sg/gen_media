@@ -298,23 +298,15 @@ const PromptDrawer = () => {
     if (!prompt.trim()) return;
     setLoading('generate', true);
     try {
-      let imageUrl;
-      let videoUrl;
-      if (stagedImages.length > 0) {
-        const ref = stagedImages[0];
-        if (ref.mediaType === 'video') {
-          videoUrl = ref.url;
-        } else {
-          imageUrl = ref.url;
-        }
-      }
+      // Veo 3.1 only supports image input (not video). Use first image ref; skip video refs.
+      const imageRef = stagedImages.find(ref => ref.mediaType !== 'video');
+      const imageUrl = imageRef?.url;
       const res = await generateVideo({
         prompt,
         negativePrompt: negativePrompt || undefined,
         aspectRatio: videoSettings.aspectRatio,
         resolution: videoSettings.resolution,
         imageUrl,
-        videoUrl,
         styleId: videoSettings.styleId
       });
       const url = res?.url;
