@@ -80,6 +80,38 @@ try:
                 content = content.rstrip() + '\n\n## Deployments' + note + '\n'
             INFRA_FILE.write_text(content)
 
+    # ── PR merge ─────────────────────────────────────────────────────────────
+    elif 'gh pr merge' in cmd:
+        # Extract PR number from command
+        m = re.search(r'gh pr merge\s+(\d+)', cmd)
+        pr_num = m.group(1) if m else '?'
+        result = run(['gh', 'pr', 'view', pr_num, '--json', 'title,headRefName'])
+        pr_title, branch = '', ''
+        if result.returncode == 0:
+            try:
+                info = json.loads(result.stdout)
+                pr_title = info.get('title', '')
+                branch = info.get('headRefName', '')
+            except Exception:
+                pass
+        desc = pr_title or f'branch {branch}' or f'PR #{pr_num}'
+        append_to_log(date, f'PR#{pr_num}', 'merge', desc)
+
+    # ── Git push ──────────────────────────────────────────────────────────────
+    elif re.search(r'\bgit push\b', cmd) and 'git push' in cmd:
+        result = run(['git', 'log', '--oneline', '-1'])
+        if result.returncode == 0 and result.stdout.strip():
+            commit_hash = result.stdout.strip().split()[0]
+            # Only note push in Infrastructure.md (not Decision-Log — commit already captured that)
+            if INFRA_FILE.exists():
+                content = INFRA_FILE.read_text()
+                note = f'\n- **{date}** `{commit_hash}`: pushed to GitHub'
+                if '## Deployments' in content:
+                    content = content.replace('## Deployments', '## Deployments' + note, 1)
+                else:
+                    content = content.rstrip() + '\n\n## Deployments' + note + '\n'
+                INFRA_FILE.write_text(content)
+
 except Exception:
     pass  # Never block tool execution
 

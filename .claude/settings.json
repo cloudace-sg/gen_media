@@ -1,23 +1,12 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "CMD=$(python3 -c \"import json,sys;d=json.load(sys.stdin);print(d.get('tool_input',d).get('command',''))\" 2>/dev/null||true); case \"$CMD\" in *grep*|*rg\\ *|*find\\ *|*fd\\ *) [ -f graphify-out/graph.json ] && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"graphify-out/graph.json exists — run graphify query first, grep only to pinpoint edit targets.\"}}' || true ;; esac"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/scripts/post-bash.py 2>/dev/null || true"
+            "command": "input=$(cat); echo \"$input\" | grep -qE '(git commit|gcloud builds submit|gh pr merge|git push)' && echo \"$input\" | python3 /home/angieng/CloudAceSG/Projects/gen_media/.claude/scripts/post-bash.py 2>/dev/null; exit 0"
           }
         ]
       }
