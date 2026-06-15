@@ -435,35 +435,42 @@ class GeminiService {
       }
       if (referenceImageParts.length === 0) referenceImageParts = undefined;
     } else if (params.videoUrl) {
-      console.log('Processing video reference for video generation:', params.videoUrl);
-      const url = params.videoUrl;
-      if (url.startsWith('data:')) {
-        const match = url.match(/^data:(.+?);base64,(.*)$/);
-        if (match) {
-          const [, mt, b64] = match;
-          const sizeBytes = Math.ceil(b64.length * 3 / 4);
-          if (sizeBytes > VIDEO_REF_MAX_BYTES) {
-            throw new Error(`Video reference is too large (${(sizeBytes / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter or lower-resolution clip.`);
+      // Veo 3.1 does not support inline videoBytes (encodedVideo).
+      // Upload the video to GCS and pass a gs:// URI instead.
+      if (!process.env.GCS_BUCKET) {
+        videoRefWarning = 'Video references require GCS to be configured. The video reference has been skipped — add an extracted frame as an image reference instead.';
+        console.warn(videoRefWarning);
+      } else {
+        console.log('Processing video reference for video generation:', params.videoUrl);
+        const url = params.videoUrl;
+        let buffer;
+        let mimeType = 'video/mp4';
+        if (url.startsWith('data:')) {
+          const match = url.match(/^data:(.+?);base64,(.*)$/);
+          if (match) {
+            mimeType = match[1];
+            buffer = Buffer.from(match[2], 'base64');
           }
-          if (sizeBytes > VIDEO_REF_WARN_BYTES) {
-            videoRefWarning = `Video reference is ${(sizeBytes / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
+        } else {
+          const response = await axios.get(url, { responseType: 'arraybuffer' });
+          buffer = Buffer.from(response.data);
+        }
+        if (buffer) {
+          if (buffer.length > VIDEO_REF_MAX_BYTES) {
+            throw new Error(`Video reference is too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter clip.`);
+          }
+          if (buffer.length > VIDEO_REF_WARN_BYTES) {
+            videoRefWarning = `Video reference is ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
             console.warn(videoRefWarning);
           }
-          videoPart = { videoBytes: b64, mimeType: mt };
-          console.log('Using data URL video for video generation');
+          // Upload to GCS and pass gs:// URI — Veo requires URI, not inline bytes
+          const userId = global.currentUserId || 'anonymous';
+          const key = `users/${userId}/video-refs/${Date.now()}.mp4`;
+          await uploadBuffer(buffer, key, mimeType);
+          const gcsUri = `gs://${process.env.GCS_BUCKET}/${key}`;
+          videoPart = { uri: gcsUri, mimeType };
+          console.log('Uploaded video reference to GCS:', gcsUri, 'size:', buffer.length, 'bytes');
         }
-      } else {
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data);
-        if (buffer.length > VIDEO_REF_MAX_BYTES) {
-          throw new Error(`Video reference is too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter or lower-resolution clip.`);
-        }
-        if (buffer.length > VIDEO_REF_WARN_BYTES) {
-          videoRefWarning = `Video reference is ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
-          console.warn(videoRefWarning);
-        }
-        videoPart = { videoBytes: buffer.toString('base64'), mimeType: 'video/mp4' };
-        console.log('Downloaded video reference for video generation, size:', buffer.length, 'bytes');
       }
     } else if (params.imageUrl) {
       console.log('Processing image for video generation:', params.imageUrl);
