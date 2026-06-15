@@ -87,4 +87,52 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST /api/generate — accepts referenceImages for reference-guided generation
+router.post('/', async (req, res) => {
+  try {
+    let { prompt, purpose, imageCount, aspectRatio, styleId, referenceImages } = req.body || {};
+    const userId = req.get('x-user-id') || 'anonymous';
+    global.currentUserId = userId;
+
+    try {
+      const brand = require('../services/brandkit');
+      const textImplied = brand.promptImpliesText(prompt) || (prompt || '').includes('[brand font]');
+      prompt = brand.applyBrandColorsPlaceholder(prompt);
+      if (textImplied) {
+        prompt = brand.applyBrandFontPlaceholder(prompt);
+      } else {
+        prompt = (prompt || '').replace('[brand font]', '');
+      }
+      prompt = brand.applyBrandLogoPlaceholder(prompt);
+    } catch (e) {
+      console.warn('Brand placeholder replacement skipped:', e.message);
+    }
+
+    if (!prompt) return res.status(400).json({ error: 'Prompt parameter is required' });
+
+    const gemini = getGeminiService();
+    const requestedCount = Math.max(1, Math.min(Number(imageCount) || 1, 4));
+    const refs = Array.isArray(referenceImages) && referenceImages.length > 0 ? referenceImages : [];
+
+    let results;
+    if (refs.length > 0) {
+      // Use remixImagesWithContext when references are provided
+      const tasks = Array.from({ length: requestedCount }, () =>
+        gemini.remixImagesWithContext(prompt, refs, aspectRatio || '16:9', styleId || 'freeform')
+      );
+      results = await Promise.all(tasks);
+    } else {
+      const tasks = Array.from({ length: requestedCount }, () =>
+        gemini.generateImage(prompt, 'photorealistic', aspectRatio || '16:9', styleId)
+      );
+      results = await Promise.all(tasks);
+    }
+
+    res.json({ prompt, results, purpose: purpose || null, requestedCount, generatedAt: new Date().toISOString() });
+  } catch (error) {
+    console.error('Generation POST API error:', error.message);
+    res.status(500).json({ error: 'Generation failed', message: error.message });
+  }
+});
+
 module.exports = router;

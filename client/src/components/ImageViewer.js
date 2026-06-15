@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Download, ZoomIn, ZoomOut, RotateCw, Move, Edit3 } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCw, Move, Edit3, Plus, Camera } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 // Lazy-load CanvasEditor (Konva)
@@ -19,7 +19,8 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
   const [retryCrossOrigin, setRetryCrossOrigin] = useState(true);
   const containerRef = useRef(null);
   const imageRef = useRef(null);
-  const { overlaysByAssetId, updateRow, getImageById, setLoading, isLoading, clearOverlays } = useStore();
+  const { overlaysByAssetId, updateRow, getImageById, setLoading, isLoading, clearOverlays, stageImage, unstageImage, stagedImages, addRow } = useStore();
+  const videoRef = useRef(null);
 
   const cacheBust = (url) => {
     try {
@@ -133,22 +134,87 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
   }, [isEditMode]);
 
   if (!image) return null;
+  const isStaged = image && stagedImages.some(s => s.id === image.id);
+
+  const handleToggleStage = () => {
+    if (!image) return;
+    if (isStaged) {
+      unstageImage(image.id);
+    } else {
+      stageImage({
+        id: image.id,
+        title: image.title,
+        url: image.url,
+        thumbnail: image.thumbnail || image.url,
+        source: image.source,
+        mediaType: image.mediaType,
+      });
+    }
+  };
+
+  const handleExtractFrame = () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/png');
+    const timestamp = Math.floor(video.currentTime * 10) / 10;
+    const frameImage = {
+      id: `frame_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      title: `Frame @${timestamp}s — ${image.title || 'Video'}`,
+      url: dataUrl,
+      thumbnail: dataUrl,
+      source: 'Extracted frame',
+      width: canvas.width,
+      height: canvas.height,
+    };
+    addRow({ type: 'upload', title: 'EXTRACTED FRAME', images: [frameImage] });
+    stageImage(frameImage);
+  };
+
   if (image.mediaType === 'video') {
     return (
       <div className="fixed top-0 right-0 bottom-24 w-1/2 bg-dark-surface border-l border-dark-border z-40 flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
           <h3 className="font-semibold text-dark-text truncate max-w-xs">{image.title || 'Video'}</h3>
-          <button onClick={onClose} className="p-2 text-dark-text-secondary hover:text-red-400 transition-colors" title="Close viewer">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExtractFrame}
+              className="px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm bg-dark-border text-dark-text hover:bg-purple-600 hover:text-white transition-colors"
+              title="Capture current frame as a reference image"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              Extract frame
+            </button>
+            <button
+              onClick={handleToggleStage}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm transition-colors ${
+                isStaged
+                  ? 'bg-accent text-black hover:bg-red-500 hover:text-white'
+                  : 'bg-dark-border text-dark-text hover:bg-accent hover:text-black'
+              }`}
+              title={isStaged ? 'Remove from references' : 'Use as reference'}
+            >
+              {isStaged ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+              {isStaged ? 'Remove ref' : 'Use as ref'}
+            </button>
+            <button onClick={onClose} className="p-2 text-dark-text-secondary hover:text-red-400 transition-colors" title="Close viewer">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 bg-black flex items-center justify-center">
-          <video 
+          <video
+            ref={videoRef}
             controls 
             className="max-w-full max-h-full" 
             src={image.url}
-            preload="none"
+            preload="auto"
             playsInline
+            crossOrigin="anonymous"
             style={{ maxWidth: '100%', maxHeight: '100%' }}
             onError={(e) => {
               console.error('Video error in ImageViewer:', {
@@ -299,6 +365,18 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
           </span>
         </div>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleToggleStage}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm transition-colors ${
+              isStaged
+                ? 'bg-accent text-black hover:bg-red-500 hover:text-white'
+                : 'bg-dark-border text-dark-text hover:bg-accent hover:text-black'
+            }`}
+            title={isStaged ? 'Remove from references' : 'Use as reference'}
+          >
+            {isStaged ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {isStaged ? 'Remove ref' : 'Use as ref'}
+          </button>
           <button
             onClick={onPrevious}
             disabled={!hasPrevious}

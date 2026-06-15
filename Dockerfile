@@ -43,7 +43,6 @@ RUN echo '#!/bin/sh' > /start.sh && \
     echo 'export PORT=3001' >> /start.sh && \
     echo 'export CLIENT_URL=http://localhost:8080' >> /start.sh && \
     echo 'export ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000' >> /start.sh && \
-    echo 'export GCS_BUCKET=gen-media-demo-assets' >> /start.sh && \
     echo 'export ASSET_PUBLIC=public' >> /start.sh && \
     echo 'node src/index.js &' >> /start.sh && \
     echo 'sleep 3' >> /start.sh && \

@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { listFiles, getSignedUrl, deleteFiles } from '../services/api';
+import { useStore } from '../store/useStore';
 import PageHeader from '../components/ui/PageHeader';
-import { Image as ImageIcon, Video, Trash2, Download, Info, ChevronDown } from 'lucide-react';
+import { Image as ImageIcon, Video, Trash2, Download, Info, ChevronDown, Plus } from 'lucide-react';
 
 // Custom dropdown component matching the canvas page style
 const TypeDropdown = ({ value, onChange, options }) => {
@@ -57,10 +59,12 @@ const TypeDropdown = ({ value, onChange, options }) => {
 export default function MyFilesPage() {
   const [items, setItems] = React.useState([]);
   const [nextToken, setNextToken] = React.useState(null);
-  const [type, setType] = React.useState(''); // '', 'uploads', 'generated_images', 'generated_remix', 'generated_videos', 'edits'
+  const [type, setType] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [selected, setSelected] = React.useState(null); // selected item
+  const [selected, setSelected] = React.useState(null);
   const [selection, setSelection] = React.useState(new Set());
+  const { stageImage } = useStore();
+  const navigate = useNavigate();
 
   const typeOptions = [
     { value: '', label: 'All types' },
@@ -105,6 +109,22 @@ export default function MyFilesPage() {
     setSelection(new Set());
   };
 
+  const handleUseAsReference = (fileItems) => {
+    const toStage = Array.isArray(fileItems) ? fileItems : [fileItems];
+    toStage.forEach((it) => {
+      const isVideo = String(it.contentType || '').startsWith('video/');
+      stageImage({
+        id: it.key,
+        title: it.key.split('/').pop(),
+        url: it.url,
+        thumbnail: it.url,
+        source: it.type.replace('_', ' '),
+        mediaType: isVideo ? 'video' : 'image',
+      });
+    });
+    navigate('/canvas');
+  };
+
   const handleDownload = async (it) => {
     try {
       const a = document.createElement('a');
@@ -131,6 +151,7 @@ export default function MyFilesPage() {
         <div className="text-sm text-dark-text truncate">{it.key.split('/').pop()}</div>
       </div>
       <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+        <button onClick={() => handleUseAsReference(it)} className="w-8 h-8 rounded bg-accent text-black hover:bg-accent-hover flex items-center justify-center" title="Use as reference"><Plus className="w-4 h-4" /></button>
         <button onClick={() => handleDownload(it)} className="w-8 h-8 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center" title="Download"><Download className="w-4 h-4" /></button>
         <button onClick={() => setSelected(it)} className="w-8 h-8 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center" title="Details"><Info className="w-4 h-4" /></button>
       </div>
@@ -146,7 +167,13 @@ export default function MyFilesPage() {
           <div className="flex items-center gap-2">
             <TypeDropdown value={type} onChange={setType} options={typeOptions} />
             {selection.size > 0 && (
-              <button onClick={handleDelete} className="h-9 px-3 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-2"><Trash2 className="w-4 h-4" />Delete</button>
+              <>
+                <button
+                  onClick={() => handleUseAsReference(items.filter((it) => selection.has(it.key)))}
+                  className="h-9 px-3 rounded bg-accent text-black hover:bg-accent-hover flex items-center gap-2"
+                ><Plus className="w-4 h-4" />Use as reference ({selection.size})</button>
+                <button onClick={handleDelete} className="h-9 px-3 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-2"><Trash2 className="w-4 h-4" />Delete</button>
+              </>
             )}
           </div>
         )}
@@ -186,7 +213,8 @@ export default function MyFilesPage() {
               <div className="text-dark-text">{selected.size ? `${(selected.size/1024/1024).toFixed(2)} MB` : '—'}</div>
             </div>
             <div className="mt-4 flex items-center gap-2">
-              <button onClick={()=>handleDownload(selected)} className="h-9 px-3 rounded bg-accent text-black hover:bg-accent-hover flex items-center gap-2"><Download className="w-4 h-4" />Download</button>
+              <button onClick={()=>handleUseAsReference(selected)} className="h-9 px-3 rounded bg-accent text-black hover:bg-accent-hover flex items-center gap-2"><Plus className="w-4 h-4" />Use as reference</button>
+              <button onClick={()=>handleDownload(selected)} className="h-9 px-3 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-2"><Download className="w-4 h-4" />Download</button>
               <button onClick={()=>setSelected(null)} className="h-9 px-3 rounded bg-dark-border text-dark-text hover:bg-gray-200">Close</button>
             </div>
           </div>

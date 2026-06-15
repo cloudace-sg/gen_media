@@ -1,13 +1,14 @@
 import React from 'react';
-import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle, Plus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { useStore } from '../store/useStore';
 import { getBrandKit, updateBrandKit, uploadBrandLogos } from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 
 const BrandAssetsPage = () => {
-  const { brandAssets, setBrandAssets } = useStore();
+  const { brandAssets, setBrandAssets, stageImage } = useStore();
+  const navigate = useNavigate();
   const [localColors, setLocalColors] = React.useState(brandAssets.colors || []);
   const [colorPickerOpen, setColorPickerOpen] = React.useState(null);
   const [isUpdating, setIsUpdating] = React.useState(false);
@@ -182,26 +183,33 @@ const BrandAssetsPage = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            {brandAssets.logos.map((url) => (
+            {brandAssets.logos.map((url, idx) => (
               <div key={url} className="relative group">
-                <img 
-                  src={url} 
-                  alt="logo" 
+                <img
+                  src={url}
+                  alt="logo"
                   className="w-full h-20 object-contain bg-dark-bg border border-dark-border rounded"
-                  onError={(e) => {
-                    console.error('Failed to load logo:', url);
-                    console.error('Error event:', e);
-                  }}
-                  onLoad={() => {
-                    console.log('Logo loaded successfully:', url);
-                  }}
+                  onError={(e) => { console.error('Failed to load logo:', url); }}
                 />
-                <button 
-                  onClick={() => removeLogo(url)} 
-                  className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 bg-black/40 rounded">
+                  <button
+                    onClick={() => {
+                      stageImage({ id: `brand_logo_${idx}`, title: 'Brand Logo', url, thumbnail: url, source: 'Brand Kit' });
+                      navigate('/canvas');
+                    }}
+                    className="w-7 h-7 rounded bg-accent text-black flex items-center justify-center"
+                    title="Use as reference"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => removeLogo(url)}
+                    className="w-7 h-7 rounded bg-red-600 text-white flex items-center justify-center"
+                    title="Remove logo"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
             ))}
             {brandAssets.logos.length === 0 && (
