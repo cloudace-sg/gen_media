@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); echo \"$input\" | grep -qE '(git commit|gcloud builds submit|gh pr merge|git push)' && echo \"$input\" | python3 /home/angieng/CloudAceSG/Projects/gen_media/.claude/scripts/post-bash.py 2>/dev/null; exit 0"
+            "command": "tmp=$(mktemp); cat > \"$tmp\"; grep -qE '(git commit|gcloud builds submit|gh pr merge|git push)' \"$tmp\" && python3 /home/angieng/CloudAceSG/Projects/gen_media/.claude/scripts/post-bash.py < \"$tmp\" 2>/dev/null; rm -f \"$tmp\"; exit 0"
           }
         ]
       }
