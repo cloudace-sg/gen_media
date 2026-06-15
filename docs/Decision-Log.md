@@ -39,6 +39,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-15 | 576ab1a | fix | Bake `REACT_APP_FIREBASE_*` vars into React build for production auth |
 | 2026-06-15 | 18fe474 | docs | 3-Layer Query Rule added to CLAUDE.md |
 | 2026-06-15 | bb2298c | chore | Optimize hooks — remove noisy Read hook, add PostToolUse Obsidian auto-update |
+| 2026-06-15 | 1effca1 | fix | post-bash hook — correct regex, absolute paths, proper try/except |
 
 ---
 

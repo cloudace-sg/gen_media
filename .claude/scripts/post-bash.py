@@ -21,16 +21,16 @@ def append_to_log(date, commit_hash, commit_type, description):
 
     if '| Date |' in content:
         lines = content.splitlines(keepends=True)
-        insert_at = None
+        # Find the last table row (last line starting with '|' after the header)
+        last_table_line = None
         in_table = False
         for i, line in enumerate(lines):
             if '| Date |' in line:
                 in_table = True
-            elif in_table and line.strip() and not line.strip().startswith('|'):
-                insert_at = i
-                break
-        if insert_at is not None:
-            lines.insert(insert_at, new_row)
+            if in_table and line.strip().startswith('|'):
+                last_table_line = i
+        if last_table_line is not None:
+            lines.insert(last_table_line + 1, new_row)
             LOG_FILE.write_text(''.join(lines))
         else:
             LOG_FILE.write_text(content.rstrip() + '\n' + new_row + '\n')
