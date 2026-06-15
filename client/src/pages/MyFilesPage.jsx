@@ -122,7 +122,7 @@ export default function MyFilesPage() {
         mediaType: isVideo ? 'video' : 'image',
       });
     });
-    navigate('/canvas');
+    // Don't auto-navigate — let user stage multiple items then go to canvas manually
   };
 
   const handleDownload = async (it) => {
@@ -139,9 +139,16 @@ export default function MyFilesPage() {
   const card = (it) => (
     <div key={it.key} className="group relative rounded-lg border border-dark-border bg-dark-surface overflow-hidden hover:shadow-sm">
       <button onClick={() => toggleSelect(it.key)} className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border ${selection.has(it.key) ? 'bg-accent border-accent' : 'bg-white border-dark-border'}`}></button>
-      <div className="aspect-video bg-dark-bg flex items-center justify-center">
+      <div className="aspect-video bg-dark-bg flex items-center justify-center cursor-pointer relative" onClick={() => setSelected(it)}>
         {String(it.contentType || '').startsWith('video/') ? (
-          <video src={it.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+          <>
+            <video src={it.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-black ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+            </div>
+          </>
         ) : (
           <img src={it.url} alt={it.key} className="w-full h-full object-cover" />
         )}

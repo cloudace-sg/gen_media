@@ -304,10 +304,9 @@ const PromptDrawer = () => {
       if (stagedImages.length > 0) {
         const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
         const videoRefs = stagedImages.filter(r => r.mediaType === 'video');
-        if (imageRefs.length > 1) {
+        // Always use image refs as style/character references, not as Veo start frame
+        if (imageRefs.length > 0) {
           referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
-        } else if (imageRefs.length === 1) {
-          imageUrl = imageRefs[0].url;
         }
         // Pass video ref only when no image refs — server uploads to GCS and passes gs:// URI to Veo
         if (videoRefs.length > 0 && !imageUrl && !referenceImageUrls) {
