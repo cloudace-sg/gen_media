@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
 import {
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
   sendSignInLinkToEmail,
@@ -53,6 +54,7 @@ export const AuthProvider = ({ children }) => {
   const [emailLinkError, setEmailLinkError] = useState(null)
   const [emailLinkSent, setEmailLinkSent] = useState(false)
   const [forbiddenDomainError, setForbiddenDomainError] = useState(null)
+  const [googleError, setGoogleError] = useState(null)
   const isProd = process.env.NODE_ENV === 'production'
 
   // Initialize Firebase auth on component mount
@@ -65,6 +67,12 @@ export const AuthProvider = ({ children }) => {
     }
 
     setIsInitialized(true)
+
+    // Handle Google redirect result on page load (signInWithRedirect lands here)
+    getRedirectResult(auth).catch((error) => {
+      console.error("Google redirect sign-in error:", error)
+      setGoogleError(error.message || "Google sign-in failed. Please try again.")
+    })
 
     const updateUserRole = async (firebaseUser) => {
       if (!firebaseUser) {
@@ -286,16 +294,17 @@ export const AuthProvider = ({ children }) => {
 
   const signInWithGoogle = async () => {
     if (!isInitialized || !auth) {
-      console.error("Firebase auth is not initialized")
+      setGoogleError("Authentication is not initialized. Please refresh the page.")
       return
     }
 
     try {
-      // If googleProvider is not available, create a new one
+      setGoogleError(null)
       const provider = googleProvider || new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
+      await signInWithRedirect(auth, provider)
     } catch (error) {
       console.error("Error signing in with Google:", error)
+      setGoogleError(error.message || "Google sign-in failed. Please try again.")
       throw error
     }
   }
@@ -386,6 +395,7 @@ export const AuthProvider = ({ children }) => {
         emailLinkError,
         emailLinkSent,
         forbiddenDomainError,
+        googleError,
       }}
     >
       {children}
