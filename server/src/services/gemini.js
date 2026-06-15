@@ -5,6 +5,20 @@ const fs = require('fs');
 const path = require('path');
 const { uploadFile, uploadBuffer } = require('./storage');
 
+// Centralized model configuration.
+// Text and image models use the generateContent / generateContentStream API.
+// Video model uses the generateVideos API (long-running operation).
+//
+// When Gemini Omni Flash ships its developer API, it will likely replace the
+// video model — but note that Omni uses generateContent (not generateVideos),
+// so the video generation method will need a new implementation, not just an
+// ID swap. Add a parallel generateVideoOmni() method at that point.
+const MODELS = {
+  text:  'gemini-3.5-flash',               // prompt enhancement, improvement, random prompt, marketing prompt
+  image: 'gemini-3.1-flash-image-preview',  // image generation + remix (generateContentStream)
+  video: 'veo-3.1-generate-preview',        // video generation (generateVideos)
+};
+
 class GeminiService {
   constructor() {
     this.apiKey = process.env.GOOGLE_GEMINI_API_KEY;
@@ -74,7 +88,7 @@ class GeminiService {
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
           { role: 'user', parts: [{ text: `User prompt: ${prompt}` }] }
@@ -97,7 +111,7 @@ class GeminiService {
     for (const img of images) {
       try {
         const url = img.url || '';
-        const isVideo = img.mediaType === 'video' || url.includes('.mp4');
+        const isVideo = img.mediaType === 'video' || url.includes('.mp4') || url.includes('.webm') || url.includes('.mov');
 
         if (url.startsWith('data:')) {
           const m = url.match(/^data:(.+?);base64,(.*)$/);
@@ -158,7 +172,7 @@ class GeminiService {
     ];
 
     const { candidates } = await this.genAI.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: MODELS.text,
       contents: [{ role: 'user', parts }],
       generationConfig: {
         temperature: 0.7,
@@ -295,7 +309,7 @@ class GeminiService {
     ];
 
     const { candidates } = await this.genAI.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: MODELS.text,
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.9, maxOutputTokens: 200 }
     });
@@ -342,7 +356,7 @@ class GeminiService {
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
           { role: 'user', parts: [{ text: `User prompt: ${prompt}` }] }
@@ -383,22 +397,71 @@ class GeminiService {
     const negativePrompt = params.negativePrompt || undefined;
     const personGeneration = params.personGeneration || undefined;
 
-    // Optional: load image/video bytes if imageUrl or videoUrl provided
+    // Optional: load reference assets
+    const VIDEO_REF_WARN_BYTES = 20 * 1024 * 1024;  // 20MB — soft warning
+    const VIDEO_REF_MAX_BYTES = 100 * 1024 * 1024;   // 100MB — hard cap
+    const IMAGE_REF_MAX_BYTES = 20 * 1024 * 1024;    // 20MB per image (Veo limit)
     let imagePart = undefined;
     let videoPart = undefined;
-    if (params.videoUrl) {
+    let referenceImageParts = undefined;
+    let videoRefWarning = undefined;
+
+    // Priority: referenceImageUrls (Ingredients to Video) > videoUrl (scene extension) > imageUrl (first frame)
+    if (Array.isArray(params.referenceImageUrls) && params.referenceImageUrls.length > 0) {
+      const urls = params.referenceImageUrls.slice(0, 3);
+      console.log(`Processing ${urls.length} reference image(s) for Ingredients to Video`);
+      referenceImageParts = [];
+      for (const url of urls) {
+        let imageData;
+        if (url.startsWith('data:')) {
+          const match = url.match(/^data:(.+?);base64,(.*)$/);
+          if (match) {
+            imageData = { imageBytes: match[2], mimeType: match[1] };
+          }
+        } else {
+          const response = await axios.get(url, { responseType: 'arraybuffer' });
+          const buffer = Buffer.from(response.data);
+          if (buffer.length > IMAGE_REF_MAX_BYTES) {
+            console.warn(`Reference image ${url} is ${(buffer.length / 1024 / 1024).toFixed(1)}MB (max ${IMAGE_REF_MAX_BYTES / 1024 / 1024}MB), skipping`);
+            continue;
+          }
+          const mimeType = mime.lookup(url) || 'image/png';
+          imageData = { imageBytes: buffer.toString('base64'), mimeType };
+        }
+        if (imageData) {
+          referenceImageParts.push({ image: imageData, referenceType: 'asset' });
+          console.log(`Prepared reference image: ${url.substring(0, 80)}...`);
+        }
+      }
+      if (referenceImageParts.length === 0) referenceImageParts = undefined;
+    } else if (params.videoUrl) {
       console.log('Processing video reference for video generation:', params.videoUrl);
       const url = params.videoUrl;
       if (url.startsWith('data:')) {
         const match = url.match(/^data:(.+?);base64,(.*)$/);
         if (match) {
           const [, mt, b64] = match;
+          const sizeBytes = Math.ceil(b64.length * 3 / 4);
+          if (sizeBytes > VIDEO_REF_MAX_BYTES) {
+            throw new Error(`Video reference is too large (${(sizeBytes / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter or lower-resolution clip.`);
+          }
+          if (sizeBytes > VIDEO_REF_WARN_BYTES) {
+            videoRefWarning = `Video reference is ${(sizeBytes / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
+            console.warn(videoRefWarning);
+          }
           videoPart = { videoBytes: b64, mimeType: mt };
           console.log('Using data URL video for video generation');
         }
       } else {
         const response = await axios.get(url, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(response.data);
+        if (buffer.length > VIDEO_REF_MAX_BYTES) {
+          throw new Error(`Video reference is too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter or lower-resolution clip.`);
+        }
+        if (buffer.length > VIDEO_REF_WARN_BYTES) {
+          videoRefWarning = `Video reference is ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
+          console.warn(videoRefWarning);
+        }
         videoPart = { videoBytes: buffer.toString('base64'), mimeType: 'video/mp4' };
         console.log('Downloaded video reference for video generation, size:', buffer.length, 'bytes');
       }
@@ -423,20 +486,27 @@ class GeminiService {
       console.log('No image or video provided for video generation - text-to-video mode');
     }
 
-    // Step 1: kick off generation with optional image or video input
+    // Step 1: kick off generation with optional image/video/reference input
     const requestParams = {
-      model: 'veo-3.1-generate-preview',
+      model: MODELS.video,
       prompt: `You're an IQ 200 specialist in brand / product marketing. Never include font names, brand names, or technical specifications in the visual content. ${prompt}`,
       config: {
         aspectRatio,
-        ...(negativePrompt ? { negativePrompt } : {})
+        ...(negativePrompt ? { negativePrompt } : {}),
+        ...(referenceImageParts ? { referenceImages: referenceImageParts } : {})
       },
-      ...(videoPart ? { video: videoPart } : imagePart ? { image: imagePart } : {})
+      ...(videoPart ? { video: videoPart } : !referenceImageParts && imagePart ? { image: imagePart } : {})
     };
+    const mode = referenceImageParts ? `ingredients (${referenceImageParts.length} refs)` : videoPart ? 'scene extension' : imagePart ? 'image-to-video' : 'text-to-video';
+    console.log(`Veo3 generation mode: ${mode}`);
     console.log('Veo3 request params:', JSON.stringify({
       ...requestParams,
       image: requestParams.image ? `[image: ${requestParams.image.mimeType}, ${requestParams.image.imageBytes?.length || 0} chars]` : undefined,
-      video: requestParams.video ? `[video: ${requestParams.video.mimeType}, ${requestParams.video.videoBytes?.length || 0} chars]` : undefined
+      video: requestParams.video ? `[video: ${requestParams.video.mimeType}, ${requestParams.video.videoBytes?.length || 0} chars]` : undefined,
+      config: {
+        ...requestParams.config,
+        referenceImages: requestParams.config.referenceImages ? `[${requestParams.config.referenceImages.length} reference(s)]` : undefined
+      }
     }, null, 2));
     
     let operation = await this.genAI.models.generateVideos(requestParams);
@@ -561,7 +631,7 @@ class GeminiService {
       throw new Error(`Failed to download video: ${downloadError.message}`);
     }
 
-    return { filename, filepath, aspectRatio, resolution };
+    return { filename, filepath, aspectRatio, resolution, videoRefWarning };
   }
 
   /**
@@ -592,7 +662,7 @@ class GeminiService {
       ];
 
       const response = await this.genAI.models.generateContentStream({
-        model: 'gemini-3.1-flash-image-preview',
+        model: MODELS.image,
         config,
         contents,
       });
@@ -710,7 +780,7 @@ class GeminiService {
       ];
 
       const response = await this.genAI.models.generateContentStream({
-        model: 'gemini-3.1-flash-image-preview',
+        model: MODELS.image,
         config,
         contents,
       });
@@ -817,7 +887,7 @@ Transform this into a high-precision marketing prompt. If an aspect ratio is pro
 
     try {
       const { candidates } = await this.genAI.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemPrompt }] },
           { role: 'user', parts: [{ text: userMessage }] }

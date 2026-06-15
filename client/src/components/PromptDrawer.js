@@ -103,6 +103,7 @@ const PromptDrawer = () => {
   const [improved, setImproved] = useState(null); // { improvedPrompt, negativePrompt, rationale }
   const [negativePrompt, setNegativePrompt] = useState('');
   const [isRandomizing, setIsRandomizing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [styles, setStyles] = useState([{ id: 'freeform', label: 'Freeform', description: 'No preset' }]);
   useEffect(() => {
     (async () => {
@@ -227,7 +228,7 @@ const PromptDrawer = () => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     setLoading('upload', true);
-    addRow({ type: 'upload', title: 'UPLOADED IMAGES', images: [], loading: true });
+    addRow({ type: 'upload', title: 'UPLOADS', images: [], loading: true });
     try {
       const { results } = await uploadImages(files);
       const state = useStore.getState();
@@ -235,7 +236,7 @@ const PromptDrawer = () => {
       if (lastRow && lastRow.type === 'upload' && lastRow.loading) {
         state.updateRow(lastRow.id, { images: results, loading: false });
       } else {
-        addRow({ type: 'upload', title: 'UPLOADED IMAGES', images: results });
+        addRow({ type: 'upload', title: 'UPLOADS', images: results });
       }
     } finally {
       setLoading('upload', false);
@@ -246,6 +247,7 @@ const PromptDrawer = () => {
   const handleSearch = async () => {
     if (!prompt.trim()) return;
     setLoading('search', true);
+    setErrorMsg('');
     try {
       let results;
       if (outputMode === 'video') {
@@ -256,70 +258,83 @@ const PromptDrawer = () => {
         addRow({ type: 'search', title: 'SEARCH', images: results.results, query: prompt, licenseInfo: results.licenseInfo });
       }
       setPrompt('');
+    } catch (error) {
+      console.error('Search failed:', error);
+      setErrorMsg(error.message || 'Search failed. Check that image search API keys are configured.');
     } finally { setLoading('search', false); }
   };
 
+  // Unified generate handler — uses staged references when present (calls POST /generate with refs)
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setLoading('generate', true);
+    setErrorMsg('');
     try {
       const totalCount = Number(generationSettings.imageCount) || 1;
-      const res = await generateImages(prompt, generationSettings.style, totalCount, generationSettings.aspectRatio, generationSettings.styleId);
-      addRow({ type: 'generate', title: `GENERATE${totalCount > 1 ? ` (${totalCount})` : ''}`, images: res.results, prompt, generation: { purpose: generationSettings.style, imageCount: totalCount } });
+      const refs = stagedImages.map(img => ({ id: img.id, url: img.url, title: img.title, mediaType: img.mediaType }));
+      const res = await generateImages(prompt, generationSettings.style, totalCount, generationSettings.aspectRatio, generationSettings.styleId, refs);
+      const images = Array.isArray(res.results) && res.results.length > 0 ? res.results : [res.result].filter(Boolean);
+      const hasRefs = refs.length > 0;
+      addRow({
+        type: hasRefs ? 'remix' : 'generate',
+        title: hasRefs ? `GENERATE WITH REFS${totalCount > 1 ? ` (${totalCount})` : ''}` : `GENERATE${totalCount > 1 ? ` (${totalCount})` : ''}`,
+        images,
+        prompt,
+        generation: { purpose: generationSettings.style, imageCount: totalCount },
+        ...(hasRefs ? { sourceImages: stagedImages } : {})
+      });
       setPrompt('');
+      if (hasRefs) clearStagedImages();
     } catch (error) {
       console.error('Generation failed:', error);
+      setErrorMsg(error.message || 'Generation failed. Please try again.');
     } finally {
       setLoading('generate', false);
     }
   };
 
-  const handleRemix = async () => {
-    if (!prompt.trim() || stagedImages.length === 0) return;
-    setLoading('remix', true);
-    try {
-      const totalCount = Number(generationSettings.imageCount) || 1;
-      const results = await remixImages(
-        prompt,
-        stagedImages,
-        generationSettings.style,
-        generationSettings.aspectRatio,
-        totalCount,
-        generationSettings.styleId
-      );
-      const images = Array.isArray(results.results) && results.results.length > 0 ? results.results : [results.result].filter(Boolean);
-      addRow({ type: 'remix', title: `REMIX${totalCount > 1 ? ` (${totalCount})` : ''}`, images, prompt, generation: { purpose: generationSettings.style, imageCount: totalCount }, sourceImages: stagedImages });
-      setPrompt('');
-      clearStagedImages();
-    } finally { setLoading('remix', false); }
-  };
-
   const handleGenerateVideo = async () => {
     if (!prompt.trim()) return;
     setLoading('generate', true);
+    setErrorMsg('');
     try {
-      // Veo 3.1 only supports image input (not video). Use first image ref; skip video refs.
-      const imageRef = stagedImages.find(ref => ref.mediaType !== 'video');
-      const imageUrl = imageRef?.url;
+      let imageUrl;
+      let referenceImageUrls;
+      if (stagedImages.length > 0) {
+        // Veo 3.1 only supports image input — skip any staged video refs
+        const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
+        if (imageRefs.length > 1) {
+          referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
+        } else if (imageRefs.length === 1) {
+          imageUrl = imageRefs[0].url;
+        }
+      }
       const res = await generateVideo({
         prompt,
         negativePrompt: negativePrompt || undefined,
         aspectRatio: videoSettings.aspectRatio,
         resolution: videoSettings.resolution,
         imageUrl,
+        referenceImageUrls,
         styleId: videoSettings.styleId
       });
       const url = res?.url;
-      if (url) addRow({ type: 'video', title: 'VIDEO', images: [{ id: `video_${Date.now()}`, title: `Video: ${prompt}`, url, source: 'AI Generated (Veo 3)', mediaType: 'video' }], prompt });
+      if (url) {
+        const row = { type: 'video', title: 'VIDEO', images: [{ id: `video_${Date.now()}`, title: `Video: ${prompt}`, url, source: 'AI Generated (Veo 3)', mediaType: 'video' }], prompt };
+        if (res.warning) row.warning = res.warning;
+        addRow(row);
+      }
       setPrompt('');
+    } catch (error) {
+      console.error('Video generation failed:', error);
+      setErrorMsg(error.message || 'Video generation failed. Please try again.');
     } finally { setLoading('generate', false); }
   };
 
   const handleCreate = async () => {
     if (isSearchMode) return handleSearch();
     if (outputMode === 'video') return handleGenerateVideo();
-    if (stagedImages.length === 0) return handleGenerate();
-    return handleRemix();
+    return handleGenerate(); // handles both with and without refs via POST /generate
   };
 
   return (
@@ -340,7 +355,7 @@ const PromptDrawer = () => {
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
               <button onClick={() => setIsSearchMode(true)} className={`px-4 h-10 rounded-md text-sm ${isSearchMode ? 'bg-accent text-black' : 'bg-dark-border text-dark-text hover:bg-gray-200'}`}>Search</button>
-              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleFilesSelected} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple onChange={handleFilesSelected} className="hidden" />
               <button onClick={handleUploadClick} className="px-4 h-10 rounded-lg bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-2 text-sm"><UploadIcon className="w-5 h-5" /><span>Upload</span></button>
             </div>
             <button onClick={() => setIsSearchMode(false)} className={`px-4 h-10 rounded-md text-sm w-fit ${!isSearchMode ? 'bg-accent text-black' : 'bg-dark-border text-dark-text hover:bg-gray-200'}`}>Create</button>
@@ -741,6 +756,12 @@ const PromptDrawer = () => {
 
       {/* Fixed Create button at bottom */}
       <div className="p-3 border-t border-dark-border bg-dark-surface">
+        {errorMsg && (
+          <div className="mb-2 px-3 py-2 bg-red-900/40 border border-red-700/50 rounded-lg text-xs text-red-300 flex items-start gap-2">
+            <span className="flex-1">{errorMsg}</span>
+            <button onClick={() => setErrorMsg('')} className="text-red-400 hover:text-red-200 flex-shrink-0">✕</button>
+          </div>
+        )}
         <button 
           type="button" 
           onClick={handleCreate} 
