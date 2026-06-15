@@ -299,14 +299,19 @@ const PromptDrawer = () => {
     setErrorMsg('');
     try {
       let imageUrl;
+      let videoUrl;
       let referenceImageUrls;
       if (stagedImages.length > 0) {
-        // Veo 3.1 only supports image input — skip any staged video refs
         const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
+        const videoRefs = stagedImages.filter(r => r.mediaType === 'video');
         if (imageRefs.length > 1) {
           referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
         } else if (imageRefs.length === 1) {
           imageUrl = imageRefs[0].url;
+        }
+        // Pass video ref only when no image refs — server uploads to GCS and passes gs:// URI to Veo
+        if (videoRefs.length > 0 && !imageUrl && !referenceImageUrls) {
+          videoUrl = videoRefs[0].url;
         }
       }
       const res = await generateVideo({
@@ -315,6 +320,7 @@ const PromptDrawer = () => {
         aspectRatio: videoSettings.aspectRatio,
         resolution: videoSettings.resolution,
         imageUrl,
+        videoUrl,
         referenceImageUrls,
         styleId: videoSettings.styleId
       });
