@@ -299,20 +299,14 @@ const PromptDrawer = () => {
     setErrorMsg('');
     try {
       let imageUrl;
-      let videoUrl;
       let referenceImageUrls;
       if (stagedImages.length > 0) {
+        // Veo 3.1 only supports image input — skip any staged video refs
         const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
-        const videoRefs = stagedImages.filter(r => r.mediaType === 'video');
-
         if (imageRefs.length > 1) {
           referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
-        } else if (imageRefs.length === 1 && videoRefs.length === 0) {
+        } else if (imageRefs.length === 1) {
           imageUrl = imageRefs[0].url;
-        }
-
-        if (videoRefs.length > 0 && !referenceImageUrls) {
-          videoUrl = videoRefs[0].url;
         }
       }
       const res = await generateVideo({
@@ -321,7 +315,6 @@ const PromptDrawer = () => {
         aspectRatio: videoSettings.aspectRatio,
         resolution: videoSettings.resolution,
         imageUrl,
-        videoUrl,
         referenceImageUrls,
         styleId: videoSettings.styleId
       });
