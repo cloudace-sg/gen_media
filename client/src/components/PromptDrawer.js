@@ -303,12 +303,13 @@ const PromptDrawer = () => {
       let referenceImageUrls;
       if (stagedImages.length > 0) {
         const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
-        const videoRefs = stagedImages.filter(r => r.mediaType === 'video');
+        // Veo scene extension only accepts Veo-generated videos — filter by source
+        const videoRefs = stagedImages.filter(r => r.mediaType === 'video' && r.source === 'AI Generated (Veo 3)');
         // Always use image refs as style/character references, not as Veo start frame
         if (imageRefs.length > 0) {
           referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
         }
-        // Pass video ref only when no image refs — server uploads to GCS and passes gs:// URI to Veo
+        // Pass video ref only when no image refs
         if (videoRefs.length > 0 && !imageUrl && !referenceImageUrls) {
           videoUrl = videoRefs[0].url;
         }
