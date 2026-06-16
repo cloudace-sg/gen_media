@@ -160,7 +160,13 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/png');
+    let dataUrl;
+    try {
+      dataUrl = canvas.toDataURL('image/png');
+    } catch (_) {
+      alert('Cannot extract frame: video is cross-origin. Try downloading and re-uploading it first.');
+      return;
+    }
     const timestamp = Math.floor(video.currentTime * 10) / 10;
     const frameImage = {
       id: `frame_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -209,12 +215,11 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
         <div className="flex-1 bg-black flex items-center justify-center">
           <video
             ref={videoRef}
-            controls 
-            className="max-w-full max-h-full" 
+            controls
+            className="max-w-full max-h-full"
             src={image.url}
             preload="auto"
             playsInline
-            crossOrigin="anonymous"
             style={{ maxWidth: '100%', maxHeight: '100%' }}
             onError={(e) => {
               console.error('Video error in ImageViewer:', {

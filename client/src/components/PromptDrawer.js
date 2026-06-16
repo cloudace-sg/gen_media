@@ -334,10 +334,13 @@ const PromptDrawer = () => {
         if (veoVideoRefs.length > 0 && !imageUrl && !referenceImageUrls) {
           videoUrl = veoVideoRefs[0].url;
         }
-        // Non-Veo video: extract last frame and use as image-to-video start frame
+        // Non-Veo video: extract a frame and pass as character/style reference (ingredients mode)
+        // Using referenceImageUrls (not imageUrl) so Veo treats it as visual inspiration,
+        // not as a start frame — allows the prompt to describe a different scene.
         if (!videoUrl && !imageUrl && !referenceImageUrls && otherVideoRefs.length > 0) {
           try {
-            imageUrl = await extractLastFrame(otherVideoRefs[0].url);
+            const frame = await extractLastFrame(otherVideoRefs[0].url);
+            referenceImageUrls = [frame];
           } catch (_) { /* skip silently if frame extraction fails */ }
         }
       }
