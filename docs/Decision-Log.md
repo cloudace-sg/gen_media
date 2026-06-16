@@ -52,6 +52,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-16 | `f2ddba6` | fix | video playback + use ingredients mode for non-Veo video refs |
 | 2026-06-16 | `1e69342` | docs | sync Obsidian vault — video reference fixes, playback, generation mode |
 | 2026-06-16 | `5407342` | fix | video thumbnail display + pointer-events on hover buttons |
+| 2026-06-16 | `b5a5ad0` | docs | sync Obsidian vault — thumbnail fix deployment log |
 
 ---
 
