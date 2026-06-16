@@ -468,7 +468,8 @@ class GeminiService {
           const key = `users/${userId}/video-refs/${Date.now()}.mp4`;
           await uploadBuffer(buffer, key, mimeType);
           const gcsUri = `gs://${process.env.GCS_BUCKET}/${key}`;
-          videoPart = { uri: gcsUri, mimeType };
+          // Do NOT include mimeType — SDK's videoToMldev maps mimeType→encoding which Veo rejects
+          videoPart = { uri: gcsUri };
           console.log('Uploaded video reference to GCS:', gcsUri, 'size:', buffer.length, 'bytes');
         }
       }
