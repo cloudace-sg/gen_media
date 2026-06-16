@@ -103,9 +103,9 @@ const ImageThumbnail = ({ image, onClick, onSelect, isSelected, rowType, selecte
       {/* Hover-to-Select Button */}
       <button
         onClick={handleSelectClick}
-        className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 ${
-          isSelected 
-            ? 'bg-accent text-white' 
+        className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto ${
+          isSelected
+            ? 'bg-accent text-white'
             : 'bg-black bg-opacity-70 text-white hover:bg-opacity-90'
         }`}
         title={isSelected ? 'Remove from staging' : 'Add to staging'}

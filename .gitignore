@@ -38,3 +38,9 @@ coverage/
 *.tgz
 .cache/
 .env
+
+# Tool/editor artifacts
+graphify-out/
+.cursor/
+.gemini/
+GEMINI.md

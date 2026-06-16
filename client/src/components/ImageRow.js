@@ -32,13 +32,17 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.style.display = 'none';
-                        e.target.nextSibling && (e.target.nextSibling.style.display = 'flex');
                       }}
                     />
-                  ) : null}
-                  <div className="w-full h-full bg-gray-700 items-center justify-center text-gray-400 text-xs" style={{ display: item.thumbnail ? 'none' : 'flex' }}>
-                    Video
-                  </div>
+                  ) : (
+                    <video
+                      src={item.url}
+                      className="w-full h-full object-cover"
+                      muted
+                      preload="metadata"
+                      playsInline
+                    />
+                  )}
                   <div 
                     className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-50 transition-all cursor-pointer"
                     onClick={() => onImageClick(item, index)}
@@ -56,7 +60,7 @@ const ImageRow = ({ images, rowId, rowType, onImageClick, onImageSelect, selecte
                   )}
                   <button
                     onClick={(e) => handleVideoSelect(item, e)}
-                    className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 z-10 ${
+                    className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto z-10 ${
                       selected
                         ? 'bg-accent text-white'
                         : 'bg-black bg-opacity-70 text-white hover:bg-opacity-90'

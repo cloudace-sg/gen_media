@@ -110,6 +110,20 @@ In PromptDrawer.js (`handleGenerate`):
 4. **Consistent storage:** Proxied images are stored under the user's GCS path, making them available in My Files for future sessions.
 
 
+## Video Thumbnail Display in the Workspace Grid (ImageRow.js)
+
+Generated videos from Veo have no `thumbnail` property set (only `url` and `mediaType: 'video'`). `ImageRow.js` renders video cards using:
+
+- If `item.thumbnail` exists: `<img src={thumbnail} />` (used for search result videos which have thumbnails from the API).
+- If `item.thumbnail` is absent: `<video src={item.url} muted preload="metadata" playsInline />` — the browser loads enough metadata to render the first frame as a still, giving a visual thumbnail for generated videos.
+
+**Play vs Stage click separation:**
+- Clicking the centered play-circle overlay calls `onImageClick` → `openImageViewer` (right panel video player).
+- The `+`/`X` reference button is positioned `absolute top-1 right-1 z-10` with `opacity-0 group-hover:opacity-100`. On small screens the button's click area can overlap the centered play circle. Adding `pointer-events-none group-hover:pointer-events-auto` ensures the invisible button cannot intercept clicks; it only becomes interactive after the hover transition reveals it.
+- Same `pointer-events-none group-hover:pointer-events-auto` fix applied to `ImageThumbnail.js` for image items.
+
+---
+
 ## Key Decisions
 - External search URLs are always proxied through POST /api/uploads/save-url before staging, to convert ephemeral CDN URLs into stable GCS URIs that Vertex AI can access.
 - Deduplication is enforced at every call site via stagedImages.some(s => s.id === image.id) rather than inside the stageImage store action, making the store a simple append-only list.
@@ -117,6 +131,7 @@ In PromptDrawer.js (`handleGenerate`):
 - My Files staging sets mediaType from contentType so PromptDrawer can route image refs and video refs to separate Vertex/Veo parameters.
 - The save-url proxy falls through silently on failure, staging the original external URL as a best-effort fallback.
 - BrandAssetsPage auto-navigates to /canvas after staging; MyFilesPage deliberately does not, allowing the user to stage multiple items before returning.
+- Video cards with no thumbnail use a `<video preload="metadata">` element so the browser renders the first frame as a still thumbnail. Do NOT use `pointer-events: auto` on hover-only buttons while they are `opacity-0` — on small screens their click area can overlap the centered play circle and silently intercept the first click.
 
 ## Key Files
 - `/home/angieng/CloudAceSG/Projects/gen_media/client/src/components/Workspace.js`
