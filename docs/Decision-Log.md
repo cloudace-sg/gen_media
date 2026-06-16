@@ -44,6 +44,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-15 | c2c52ea | chore | remove noisy PreToolUse hook; filter PostToolUse in bash before spawning Python |
 | 2026-06-15 | 19c3d4d | fix | use temp file in PostToolUse hook to avoid bash variable escaping issues |
 | 2026-06-16 | 0fdf824 | fix | drop mimeType from Veo video ref — SDK maps it to encoding field which Veo rejects |
+| 2026-06-16 | `fda4186` | docs | sync Obsidian vault — clean Decision-Log rows, remove duplicate deploy entry |
 
 ---
 

@@ -3,6 +3,7 @@ const axios = require('axios');
 const mime = require('mime-types');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { uploadFile, uploadBuffer } = require('./storage');
 
 // Centralized model configuration.
@@ -435,42 +436,49 @@ class GeminiService {
       }
       if (referenceImageParts.length === 0) referenceImageParts = undefined;
     } else if (params.videoUrl) {
-      // Veo 3.1 does not support inline videoBytes (encodedVideo).
-      // Upload the video to GCS and pass a gs:// URI instead.
-      if (!process.env.GCS_BUCKET) {
-        videoRefWarning = 'Video references require GCS to be configured. The video reference has been skipped — add an extracted frame as an image reference instead.';
-        console.warn(videoRefWarning);
-      } else {
-        console.log('Processing video reference for video generation:', params.videoUrl);
-        const url = params.videoUrl;
-        let buffer;
-        let mimeType = 'video/mp4';
-        if (url.startsWith('data:')) {
-          const match = url.match(/^data:(.+?);base64,(.*)$/);
-          if (match) {
-            mimeType = match[1];
-            buffer = Buffer.from(match[2], 'base64');
-          }
-        } else {
-          const response = await axios.get(url, { responseType: 'arraybuffer' });
-          buffer = Buffer.from(response.data);
+      // Veo requires an https://generativelanguage.googleapis.com/ URI — upload via Files API
+      console.log('Processing video reference for video generation:', params.videoUrl);
+      const url = params.videoUrl;
+      let buffer;
+      let mimeType = 'video/mp4';
+      if (url.startsWith('data:')) {
+        const match = url.match(/^data:(.+?);base64,(.*)$/);
+        if (match) {
+          mimeType = match[1];
+          buffer = Buffer.from(match[2], 'base64');
         }
-        if (buffer) {
-          if (buffer.length > VIDEO_REF_MAX_BYTES) {
-            throw new Error(`Video reference is too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter clip.`);
+      } else {
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        buffer = Buffer.from(response.data);
+      }
+      if (buffer) {
+        if (buffer.length > VIDEO_REF_MAX_BYTES) {
+          throw new Error(`Video reference is too large (${(buffer.length / 1024 / 1024).toFixed(1)}MB). Maximum is ${VIDEO_REF_MAX_BYTES / 1024 / 1024}MB. Use a shorter clip.`);
+        }
+        if (buffer.length > VIDEO_REF_WARN_BYTES) {
+          videoRefWarning = `Video reference is ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
+          console.warn(videoRefWarning);
+        }
+        const tmpPath = path.join(os.tmpdir(), `veo-ref-${Date.now()}.mp4`);
+        try {
+          fs.writeFileSync(tmpPath, buffer);
+          let uploadedFile = await this.genAI.files.upload({ file: tmpPath, config: { mimeType } });
+          console.log('Uploaded video reference to Files API:', uploadedFile.name, 'state:', uploadedFile.state);
+          // Poll until ACTIVE (large files may need processing time)
+          let polls = 0;
+          while (uploadedFile.state === 'PROCESSING' && polls < 30) {
+            await new Promise(r => setTimeout(r, 2000));
+            uploadedFile = await this.genAI.files.get({ file: uploadedFile.name });
+            polls++;
+            console.log('File state poll', polls, ':', uploadedFile.state);
           }
-          if (buffer.length > VIDEO_REF_WARN_BYTES) {
-            videoRefWarning = `Video reference is ${(buffer.length / 1024 / 1024).toFixed(1)}MB. Veo only uses the last second of the clip for scene extension — consider using a shorter clip for faster processing.`;
-            console.warn(videoRefWarning);
+          if (uploadedFile.state !== 'ACTIVE') {
+            throw new Error(`Video reference file never became ACTIVE (state: ${uploadedFile.state})`);
           }
-          // Upload to GCS and pass gs:// URI — Veo requires URI, not inline bytes
-          const userId = global.currentUserId || 'anonymous';
-          const key = `users/${userId}/video-refs/${Date.now()}.mp4`;
-          await uploadBuffer(buffer, key, mimeType);
-          const gcsUri = `gs://${process.env.GCS_BUCKET}/${key}`;
-          // Do NOT include mimeType — SDK's videoToMldev maps mimeType→encoding which Veo rejects
-          videoPart = { uri: gcsUri };
-          console.log('Uploaded video reference to GCS:', gcsUri, 'size:', buffer.length, 'bytes');
+          videoPart = { uri: uploadedFile.uri };
+          console.log('Video reference ready:', uploadedFile.uri, 'size:', buffer.length, 'bytes');
+        } finally {
+          try { fs.unlinkSync(tmpPath); } catch (_) {}
         }
       }
     } else if (params.imageUrl) {
