@@ -45,6 +45,11 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-15 | 19c3d4d | fix | use temp file in PostToolUse hook to avoid bash variable escaping issues |
 | 2026-06-16 | 0fdf824 | fix | drop mimeType from Veo video ref — SDK maps it to encoding field which Veo rejects |
 | 2026-06-16 | `fda4186` | docs | sync Obsidian vault — clean Decision-Log rows, remove duplicate deploy entry |
+| 2026-06-16 | `09368cc` | fix | upload video reference via Gemini Files API instead of GCS |
+| 2026-06-16 | `f28398c` | fix | use {name} not {file} in files.get() — wrong param key crashed formatMap |
+| 2026-06-16 | `4c7a434` | fix | restrict video reference to Veo-generated videos only |
+| 2026-06-16 | `d5f5a01` | feat | extract last frame from non-Veo videos for image-to-video |
+| 2026-06-16 | `f2ddba6` | fix | video playback + use ingredients mode for non-Veo video refs |
 
 ---
 
