@@ -51,6 +51,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-16 | `d5f5a01` | feat | extract last frame from non-Veo videos for image-to-video |
 | 2026-06-16 | `f2ddba6` | fix | video playback + use ingredients mode for non-Veo video refs |
 | 2026-06-16 | `1e69342` | docs | sync Obsidian vault — video reference fixes, playback, generation mode |
+| 2026-06-16 | `5407342` | fix | video thumbnail display + pointer-events on hover buttons |
 
 ---
 
