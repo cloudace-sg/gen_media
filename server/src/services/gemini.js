@@ -468,7 +468,7 @@ class GeminiService {
           let polls = 0;
           while (uploadedFile.state === 'PROCESSING' && polls < 30) {
             await new Promise(r => setTimeout(r, 2000));
-            uploadedFile = await this.genAI.files.get({ file: uploadedFile.name });
+            uploadedFile = await this.genAI.files.get({ name: uploadedFile.name });
             polls++;
             console.log('File state poll', polls, ':', uploadedFile.state);
           }
