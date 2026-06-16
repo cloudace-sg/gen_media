@@ -93,6 +93,27 @@ const PromptDrawer = () => {
     addRow
   } = useStore();
 
+  // Extract the last frame of a video as a data URL (for image-to-video with non-Veo videos)
+  const extractLastFrame = (videoUrl) => new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.max(0, video.duration - 0.5);
+    };
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.92));
+      } catch (e) { reject(e); }
+    };
+    video.onerror = reject;
+    video.src = videoUrl;
+  });
+
   const [prompt, setPrompt] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(true);
   const fileInputRef = useRef(null);
@@ -303,15 +324,21 @@ const PromptDrawer = () => {
       let referenceImageUrls;
       if (stagedImages.length > 0) {
         const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
-        // Veo scene extension only accepts Veo-generated videos — filter by source
-        const videoRefs = stagedImages.filter(r => r.mediaType === 'video' && r.source === 'AI Generated (Veo 3)');
+        const veoVideoRefs = stagedImages.filter(r => r.mediaType === 'video' && r.source === 'AI Generated (Veo 3)');
+        const otherVideoRefs = stagedImages.filter(r => r.mediaType === 'video' && r.source !== 'AI Generated (Veo 3)');
         // Always use image refs as style/character references, not as Veo start frame
         if (imageRefs.length > 0) {
           referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
         }
-        // Pass video ref only when no image refs
-        if (videoRefs.length > 0 && !imageUrl && !referenceImageUrls) {
-          videoUrl = videoRefs[0].url;
+        // Veo scene extension: use Veo-generated video if available, no image refs
+        if (veoVideoRefs.length > 0 && !imageUrl && !referenceImageUrls) {
+          videoUrl = veoVideoRefs[0].url;
+        }
+        // Non-Veo video: extract last frame and use as image-to-video start frame
+        if (!videoUrl && !imageUrl && !referenceImageUrls && otherVideoRefs.length > 0) {
+          try {
+            imageUrl = await extractLastFrame(otherVideoRefs[0].url);
+          } catch (_) { /* skip silently if frame extraction fails */ }
         }
       }
       const res = await generateVideo({
