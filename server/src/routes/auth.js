@@ -37,6 +37,14 @@ router.post('/postSignIn', authenticate, async (req, res) => {
       return res.json({ ok: true, role: exception.role });
     }
 
+    // Trusted domains get the default role automatically
+    const trustedDomains = ['cloud-ace.com'];
+    const domain = email.split('@')[1]?.toLowerCase();
+    if (trustedDomains.includes(domain)) {
+      await admin.auth().setCustomUserClaims(uid, { role: defaultRole });
+      return res.json({ ok: true, role: defaultRole });
+    }
+
     // No role and not in exceptions → reject (invite-only)
     return res.status(403).json({ error: 'Not invited. Contact an administrator.' });
   } catch (e) {
