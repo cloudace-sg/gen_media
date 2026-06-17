@@ -552,7 +552,17 @@ class GeminiService {
       pollCount++;
       console.log(`Veo3 polling attempt ${pollCount}, elapsed: ${Math.round((Date.now() - startedAt) / 1000)}s`);
       await new Promise((r) => setTimeout(r, 10000));
-      operation = await this.genAI.operations.getVideosOperation({ operation });
+      try {
+        operation = await this.genAI.operations.getVideosOperation({ operation });
+      } catch (pollErr) {
+        // Veo occasionally returns 503 UNAVAILABLE during polling — treat as transient and retry
+        const isTransient = /503|unavailable|service/i.test(pollErr.message || '');
+        if (isTransient) {
+          console.warn(`Veo3 transient poll error (attempt ${pollCount}), retrying: ${pollErr.message}`);
+          continue;
+        }
+        throw pollErr;
+      }
       console.log(`Veo3 polling update: done=${operation.done}, hasResponse=${!!operation.response}, generatedCount=${operation.response?.generatedVideos?.length || 0}`);
     }
 
