@@ -527,46 +527,59 @@ class GeminiService {
     }, null, 2));
     
     let operation;
-    try {
-      operation = await this.genAI.models.generateVideos(requestParams);
-    } catch (err) {
-      // Veo may not support the requested resolution+aspectRatio combo — fall back to 720p
-      if (resolution !== '720p' && /invalid|unsupported|resolution/i.test(err.message || '')) {
-        console.warn(`Veo rejected resolution=${resolution} for ${aspectRatio}, retrying at 720p`);
-        requestParams.config.resolution = '720p';
-        operation = await this.genAI.models.generateVideos(requestParams);
-      } else {
-        throw err;
+    // Helper: run generateVideos + poll to completion, retrying transient 503s
+    const runAndPoll = async (reqParams) => {
+      let op = await this.genAI.models.generateVideos(reqParams);
+      console.log('Veo3 operation started:', op.name);
+      const startedAt = Date.now();
+      const maxMs = 15 * 60 * 1000;
+      let pollCount = 0;
+      while (!op.done) {
+        if (Date.now() - startedAt > maxMs) throw new Error('Video generation timed out');
+        pollCount++;
+        console.log(`Veo3 polling attempt ${pollCount}, elapsed: ${Math.round((Date.now() - startedAt) / 1000)}s`);
+        await new Promise((r) => setTimeout(r, 10000));
+        try {
+          op = await this.genAI.operations.getVideosOperation({ operation: op });
+        } catch (pollErr) {
+          if (/503|unavailable|service/i.test(pollErr.message || '')) {
+            console.warn(`Veo3 transient poll error (attempt ${pollCount}), retrying: ${pollErr.message}`);
+            continue;
+          }
+          throw pollErr;
+        }
+        console.log(`Veo3 polling update: done=${op.done}, hasResponse=${!!op.response}, generatedCount=${op.response?.generatedVideos?.length || 0}`);
       }
-    }
-    console.log('Veo3 operation started:', operation.name);
+      return op;
+    };
 
-    // Step 2: poll until done
-    const startedAt = Date.now();
-    const maxMs = 15 * 60 * 1000; // 15 minutes (Veo-3 can take 10-15+ minutes)
-    let pollCount = 0;
-    while (!operation.done) {
-      if (Date.now() - startedAt > maxMs) {
-        throw new Error('Video generation timed out');
-      }
-      pollCount++;
-      console.log(`Veo3 polling attempt ${pollCount}, elapsed: ${Math.round((Date.now() - startedAt) / 1000)}s`);
-      await new Promise((r) => setTimeout(r, 10000));
+    // Resolution fallback chain: 4k → 1080p → 720p
+    // Code 13 (INTERNAL) or launch-time errors mean the resolution isn't supported — step down
+    const resolutionChain = resolution === '4k' ? ['4k', '1080p', '720p']
+      : resolution === '1080p' ? ['1080p', '720p']
+      : ['720p'];
+
+    let operation;
+    for (const res of resolutionChain) {
+      requestParams.config.resolution = res;
       try {
-        operation = await this.genAI.operations.getVideosOperation({ operation });
-      } catch (pollErr) {
-        // Veo occasionally returns 503 UNAVAILABLE during polling — treat as transient and retry
-        const isTransient = /503|unavailable|service/i.test(pollErr.message || '');
-        if (isTransient) {
-          console.warn(`Veo3 transient poll error (attempt ${pollCount}), retrying: ${pollErr.message}`);
+        operation = await runAndPoll(requestParams);
+      } catch (err) {
+        if (res !== resolutionChain[resolutionChain.length - 1] && /invalid|unsupported|resolution/i.test(err.message || '')) {
+          console.warn(`Veo rejected resolution=${res}, stepping down`);
           continue;
         }
-        throw pollErr;
+        throw err;
       }
-      console.log(`Veo3 polling update: done=${operation.done}, hasResponse=${!!operation.response}, generatedCount=${operation.response?.generatedVideos?.length || 0}`);
+      // Code 13 INTERNAL after operation completes = resolution not supported — step down
+      if (operation?.error?.code === 13 && res !== resolutionChain[resolutionChain.length - 1]) {
+        console.warn(`Veo code 13 for resolution=${res} (${aspectRatio}), stepping down to next resolution`);
+        continue;
+      }
+      break;
     }
 
-    // Debug: log final operation structure for troubleshooting (safe fields only)
+    // Debug: log final operation structure
     try {
       const dbg = {
         done: operation?.done,
@@ -574,7 +587,8 @@ class GeminiService {
         hasResponse: !!operation?.response,
         generatedCount: operation?.response?.generatedVideos?.length || 0,
         raiFiltered: operation?.response?.raiMediaFilteredCount || 0,
-        raiReasons: operation?.response?.raiMediaFilteredReasons || []
+        raiReasons: operation?.response?.raiMediaFilteredReasons || [],
+        resolution: requestParams.config.resolution
       };
       console.log('Veo3 final operation:', JSON.stringify(dbg));
     } catch (_) {}
