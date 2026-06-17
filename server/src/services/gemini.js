@@ -394,7 +394,9 @@ class GeminiService {
     }
 
     const aspectRatio = params.aspectRatio === '9:16' ? '9:16' : '16:9';
-    const resolution = params.resolution === '1080p' && aspectRatio === '16:9' ? '1080p' : '720p';
+    const resolution = params.resolution === '4k' && aspectRatio === '16:9' ? '4k'
+      : params.resolution === '1080p' && aspectRatio === '16:9' ? '1080p'
+      : '720p';
     const negativePrompt = params.negativePrompt || undefined;
     const personGeneration = params.personGeneration || undefined;
 
@@ -508,6 +510,7 @@ class GeminiService {
       prompt: `You're an IQ 200 specialist in brand / product marketing. Never include font names, brand names, or technical specifications in the visual content. ${prompt}`,
       config: {
         aspectRatio,
+        resolution,
         ...(negativePrompt ? { negativePrompt } : {}),
         ...(referenceImageParts ? { referenceImages: referenceImageParts } : {})
       },
