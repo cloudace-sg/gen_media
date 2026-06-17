@@ -526,7 +526,6 @@ class GeminiService {
       }
     }, null, 2));
     
-    let operation;
     // Helper: run generateVideos + poll to completion, retrying transient 503s
     const runAndPoll = async (reqParams) => {
       let op = await this.genAI.models.generateVideos(reqParams);
