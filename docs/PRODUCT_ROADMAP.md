@@ -14,7 +14,7 @@
 | Component | Status |
 |-----------|--------|
 | Image generation | ✅ Working (Gemini 2.5 Flash Image) |
-| Video generation | ✅ Working (Veo 3.1 Preview — needs migration to GA) |
+| Video generation | ✅ Working (Veo 3.1 GA — migrated May 2026) |
 | Image remix/compositing | ✅ Working |
 | Brand kit (manual) | ✅ Working |
 | Reference image search | ✅ Working (Pexels + Unsplash + Pixabay) |
@@ -22,7 +22,9 @@
 | Prompt improvement | ✅ Working |
 | User auth (Firebase) | ✅ Working |
 | GCS asset storage | ✅ Working |
-| My Files page | ✅ Basic listing |
+| My Files page | ✅ Working (listing + Use as Reference + Extend) |
+| Video scene extension | ✅ Working (Extend button → continuation prompt → Veo) |
+| Ingredients to video | ✅ Working (up to 3 image refs as style/character refs) |
 
 ---
 
@@ -74,7 +76,7 @@
 | # | Feature | Description | Effort |
 |---|---------|-------------|--------|
 | 7 | **Video as Reference (No Download)** | Every generated asset tagged with prompt metadata in GCS. "Use as Reference" button in My Files → populates Creative Controls instantly. | 3d |
-| 8 | **Video Scene Extension** | Extract last frame (ffmpeg) → pass to VEO as starting frame → seamless continuation. Build 30-60s sequences by chaining clips. | 2d |
+| 8 | **Video Scene Extension** ✅ | "Extend" button on video cards in My Files stages the video, switches PromptDrawer to Video+Create mode via `pendingExtend` store flag, navigates to canvas. User types continuation prompt → existing pipeline handles frame extraction (Canvas API for non-Veo, GCS URI for Veo). | 2d |
 | 9 | **Golden Prompts Library** | Save successful prompts as reusable templates. Tag by campaign/product/style. Share across team. One-click regenerate. | 2d |
 
 ### Creative Intelligence

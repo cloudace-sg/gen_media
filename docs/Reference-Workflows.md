@@ -73,6 +73,31 @@ The gen_media project has 4 distinct paths for adding reference images/videos in
 
 ---
 
+---
+
+### 5. Extend Video (My Files → Extend → canvas)
+
+**Entry point:** MyFilesPage.jsx `handleExtend()` — purple `ArrowRight` button, visible on hover for video cards only.
+
+**Flow:**
+1. User hovers a video card in My Files and clicks the `→` (Extend) button.
+2. `handleExtend(it)` calls `triggerExtend(it)` from the Zustand store, then `navigate('/')`.
+3. `triggerExtend` in useStore: calls `stageImage()` with `mediaType: 'video'`, sets `outputMode: 'video'`, sets `pendingExtend: true`.
+4. On the canvas, PromptDrawer mounts/re-renders and its `useEffect([pendingExtend])` fires: sets `isSearchMode(false)` (switches to Create tab) then calls `clearPendingExtend()`.
+5. The staged video appears in the refs tray. The user types a continuation prompt and hits Generate.
+6. In `handleGenerateVideo`, the pipeline checks the staged video's `source`:
+   - **Veo-generated (`source === 'AI Generated (Veo 3)'`):** passes the GCS URL as `videoUrl` — Veo receives the full video for direct scene extension.
+   - **Non-Veo (uploaded, search):** `extractLastFrame()` (Canvas API) extracts the last frame as a JPEG data URL and passes it as `imageUrl` for image-to-video generation.
+
+**Why `pendingExtend` is a one-shot flag:** `isSearchMode` is local state inside PromptDrawer (not in the store). The flag bridges the navigation gap — it's set before `navigate('/')` and consumed inside PromptDrawer's `useEffect` on the next render, then immediately cleared so it doesn't fire again on re-renders.
+
+**Key files changed (commit `0ef8a77`):**
+- `client/src/store/useStore.js` — `pendingExtend`, `triggerExtend()`, `clearPendingExtend()`
+- `client/src/components/PromptDrawer.js` — `useEffect([pendingExtend])` consumes the flag
+- `client/src/pages/MyFilesPage.jsx` — Extend button + `handleExtend()`
+
+---
+
 ## The Staging System — Zustand stagedImages
 
 All 4 workflows write to the same `stagedImages` array in the Zustand store (`useStore`). The key actions are:

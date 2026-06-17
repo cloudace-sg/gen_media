@@ -54,6 +54,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-16 | `5407342` | fix | video thumbnail display + pointer-events on hover buttons |
 | 2026-06-16 | `b5a5ad0` | docs | sync Obsidian vault — thumbnail fix deployment log |
 | 2026-06-16 | `d393d31` | docs | sync Obsidian vault — deployment log for b5a5ad0 |
+| 2026-06-17 | `c547c36` | docs | sync Obsidian vault — pre-deploy docs sync |
+| 2026-06-17 | `0ef8a77` | feat | add Extend button to video cards in My Files (SOW-8) |
 
 ---
 
