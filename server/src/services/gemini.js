@@ -17,7 +17,7 @@ const { uploadFile, uploadBuffer } = require('./storage');
 const MODELS = {
   text:  'gemini-3.5-flash',               // prompt enhancement, improvement, random prompt, marketing prompt
   image: 'gemini-3.1-flash-image-preview',  // image generation + remix (generateContentStream)
-  video: 'veo-3.1-generate-preview',        // video generation (generateVideos)
+  video: 'veo-3.1-generate-001',             // video generation (generateVideos)
 };
 
 class GeminiService {

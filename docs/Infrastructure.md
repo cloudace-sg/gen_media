@@ -120,6 +120,9 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-17** `6e844ac`: Cloud Build → Cloud Run ❌ FAILED
+- **2026-06-17** `222f669`: Cloud Build → Cloud Run ❌ FAILED
+- **2026-06-17** `e8d7eaf`: pushed to GitHub
 - **2026-06-17** `0ef8a77`: Cloud Build → Cloud Run ✅ SUCCESS (build 86c0d657)
 - **2026-06-17** `0ef8a77`: pushed to GitHub
 - **2026-06-17** `c547c36`: Cloud Build → Cloud Run ✅ SUCCESS

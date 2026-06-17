@@ -56,6 +56,12 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-16 | `d393d31` | docs | sync Obsidian vault — deployment log for b5a5ad0 |
 | 2026-06-17 | `c547c36` | docs | sync Obsidian vault — pre-deploy docs sync |
 | 2026-06-17 | `0ef8a77` | feat | add Extend button to video cards in My Files (SOW-8) |
+| 2026-06-17 | `e8d7eaf` | docs | sync Obsidian vault — SOW-8 Extend button complete |
+| 2026-06-17 | `222f669` | feat | native 4K resolution for Veo video generation (SOW-4) |
+| 2026-06-17 | `6e844ac` | feat | allow 1080p and 4K for all aspect ratios (SOW-4) |
+| 2026-06-17 | `fe9cbe5` | fix | retry on transient 503 UNAVAILABLE during Veo polling |
+| 2026-06-17 | `e4b0f10` | fix | resolution fallback chain for Veo code 13 errors (SOW-4) |
+| 2026-06-17 | `e4b0f10` | fix | resolution fallback chain for Veo code 13 errors (SOW-4) |
 
 ---
 
