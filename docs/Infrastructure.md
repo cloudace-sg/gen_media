@@ -120,10 +120,16 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
-- **2026-06-17** `6e844ac`: Cloud Build → Cloud Run ❌ FAILED
-- **2026-06-17** `222f669`: Cloud Build → Cloud Run ❌ FAILED
+- **2026-06-17** `05c03fd`: Cloud Build → Cloud Run ✅ SUCCESS — auth: trusted domain auto-role
+- **2026-06-17** `05c03fd`: pushed to GitHub
+- **2026-06-17** `a388441`: Cloud Build → Cloud Run ✅ SUCCESS — fix duplicate let operation syntax error
+- **2026-06-17** `5f22465`: Cloud Build → Cloud Run ✅ SUCCESS — Veo GA model migration
+- **2026-06-17** `e4b0f10`: Cloud Build → Cloud Run ✅ SUCCESS — resolution fallback chain
+- **2026-06-17** `fe9cbe5`: Cloud Build → Cloud Run ✅ SUCCESS — transient 503 poll retry
+- **2026-06-17** `6e844ac`: Cloud Build → Cloud Run ✅ SUCCESS — 1080p/4K all aspect ratios
+- **2026-06-17** `222f669`: Cloud Build → Cloud Run ✅ SUCCESS — native 4K resolution
 - **2026-06-17** `e8d7eaf`: pushed to GitHub
-- **2026-06-17** `0ef8a77`: Cloud Build → Cloud Run ✅ SUCCESS (build 86c0d657)
+- **2026-06-17** `0ef8a77`: Cloud Build → Cloud Run ✅ SUCCESS (build 86c0d657) — Extend button
 - **2026-06-17** `0ef8a77`: pushed to GitHub
 - **2026-06-17** `c547c36`: Cloud Build → Cloud Run ✅ SUCCESS
 - **2026-06-17** `c547c36`: pushed to GitHub

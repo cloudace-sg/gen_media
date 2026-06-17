@@ -61,7 +61,10 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-17 | `6e844ac` | feat | allow 1080p and 4K for all aspect ratios (SOW-4) |
 | 2026-06-17 | `fe9cbe5` | fix | retry on transient 503 UNAVAILABLE during Veo polling |
 | 2026-06-17 | `e4b0f10` | fix | resolution fallback chain for Veo code 13 errors (SOW-4) |
-| 2026-06-17 | `e4b0f10` | fix | resolution fallback chain for Veo code 13 errors (SOW-4) |
+| 2026-06-17 | `5f22465` | feat | migrate Veo model to veo-3.1-generate-001 GA (SOW-0) |
+| 2026-06-17 | `a388441` | fix | remove duplicate let operation declaration crashing Express |
+| 2026-06-17 | `05c03fd` | fix | auto-grant default role to trusted domain users on postSignIn |
+| 2026-06-17 | `05c03fd` | fix | auto-grant default role to trusted domain users on postSignIn |
 
 ---
 

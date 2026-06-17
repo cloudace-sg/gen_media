@@ -14,17 +14,18 @@
 | Component | Status |
 |-----------|--------|
 | Image generation | ✅ Working (Gemini 2.5 Flash Image) |
-| Video generation | ✅ Working (Veo 3.1 GA — migrated May 2026) |
+| Video generation | ✅ Working (Veo 3.1 GA `veo-3.1-generate-001` — migrated Jun 2026) |
 | Image remix/compositing | ✅ Working |
 | Brand kit (manual) | ✅ Working |
 | Reference image search | ✅ Working (Pexels + Unsplash + Pixabay) |
 | Video reference search | ✅ Working |
 | Prompt improvement | ✅ Working |
-| User auth (Firebase) | ✅ Working |
+| User auth (Firebase) | ✅ Working (trusted domain auto-role for cloud-ace.com) |
 | GCS asset storage | ✅ Working |
 | My Files page | ✅ Working (listing + Use as Reference + Extend) |
 | Video scene extension | ✅ Working (Extend button → continuation prompt → Veo) |
 | Ingredients to video | ✅ Working (up to 3 image refs as style/character refs) |
+| 4K / 1080p video | ✅ Working (all aspect ratios; fallback chain 4k→1080p→720p on code 13) |
 
 ---
 
@@ -55,11 +56,11 @@
 
 | # | Feature | Description | Effort | Abbott Impact |
 |---|---------|-------------|--------|---------------|
-| 0 | **Veo endpoint migration** | Change model string to `veo-3.1-generate-001` | 0.5d | Prerequisite |
+| 0 | **Veo endpoint migration** ✅ | Migrated to `veo-3.1-generate-001` GA (Jun 2026) | 0.5d | Done |
 | 1 | **Automatic Quality Loop (Director)** | Generate → Gemini scores output vs. prompt + references → auto-retry with refined prompt if below threshold. User only sees the best result. | 4d | Eliminates 3-4 manual attempts |
 | 2 | **Reference Image Accuracy (Ingredients to Video)** | Pass up to 3 reference images via VEO 3.1 `referenceImages` API with `referenceType: "asset"`. Also: Gemini analyzes references and injects composition details into enriched prompt. | 2d | Fixes "uploaded images not reflected" |
 | 3 | **Multiple Output Variations** | Generate 2-4 video variations per request via `sampleCount`. User picks the best. | 1d | More choice, fewer retries |
-| 4 | **Native 4K Resolution** | Add `resolution: "4k"` option (native VEO 3.1 support). Falls back to 1080p if unavailable. | 0.5d | Professional quality output |
+| 4 | **Native 4K Resolution** ✅ | 4K/1080p for all aspect ratios; fallback chain 4k→1080p→720p on code 13; transient 503 poll retries | 0.5d | Professional quality output |
 | 5 | **Native Audio UI** | Add audio description field. Guide users to describe sound. VEO already generates audio natively. | 0.5d | Complete videos out of the box |
 | 6 | **Layout-Aware Generation** | Prompt engineering for text-safe zones: "product left, negative space right for copy." UI indicator showing safe areas. | 1.5d | Collaterals usable without Canva |
 
