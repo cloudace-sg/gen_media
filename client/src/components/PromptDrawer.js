@@ -763,17 +763,13 @@ const PromptDrawer = () => {
                   value={videoSettings.resolution}
                   onChange={(newResolution) => {
                     setVideoResolution(newResolution);
-                    // 1080p and 4K are landscape-only — force 16:9
-                    if ((newResolution === '1080p' || newResolution === '4k') && videoSettings.aspectRatio === '9:16') {
-                      setVideoAspectRatio('16:9');
-                    }
                   }}
                   options={[{
                     label: "Video Resolution",
                     options: [
                       { value: "720p", label: "720p", description: "Standard quality" },
-                      { value: "1080p", label: "1080p (16:9 only)", description: "High quality, landscape only" },
-                      { value: "4k", label: "4K (16:9 only)", description: "Ultra HD, landscape only" }
+                      { value: "1080p", label: "1080p", description: "High quality" },
+                      { value: "4k", label: "4K", description: "Ultra HD" }
                     ]
                   }]}
                 />
@@ -785,11 +781,9 @@ const PromptDrawer = () => {
                   onChange={setVideoAspectRatio}
                   options={[{
                     label: "Video Aspect Ratio",
-                    options: videoSettings.resolution === '720p' ? [
+                    options: [
                       { value: "16:9", label: "16:9 (Widescreen)", description: "Landscape format" },
                       { value: "9:16", label: "9:16 (Vertical)", description: "Portrait format" }
-                    ] : [
-                      { value: "16:9", label: "16:9 (Widescreen)", description: "Landscape only at this resolution" }
                     ]
                   }]}
                 />

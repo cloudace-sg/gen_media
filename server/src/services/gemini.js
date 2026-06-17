@@ -394,9 +394,7 @@ class GeminiService {
     }
 
     const aspectRatio = params.aspectRatio === '9:16' ? '9:16' : '16:9';
-    const resolution = params.resolution === '4k' && aspectRatio === '16:9' ? '4k'
-      : params.resolution === '1080p' && aspectRatio === '16:9' ? '1080p'
-      : '720p';
+    const resolution = ['4k', '1080p', '720p'].includes(params.resolution) ? params.resolution : '720p';
     const negativePrompt = params.negativePrompt || undefined;
     const personGeneration = params.personGeneration || undefined;
 
@@ -528,7 +526,19 @@ class GeminiService {
       }
     }, null, 2));
     
-    let operation = await this.genAI.models.generateVideos(requestParams);
+    let operation;
+    try {
+      operation = await this.genAI.models.generateVideos(requestParams);
+    } catch (err) {
+      // Veo may not support the requested resolution+aspectRatio combo — fall back to 720p
+      if (resolution !== '720p' && /invalid|unsupported|resolution/i.test(err.message || '')) {
+        console.warn(`Veo rejected resolution=${resolution} for ${aspectRatio}, retrying at 720p`);
+        requestParams.config.resolution = '720p';
+        operation = await this.genAI.models.generateVideos(requestParams);
+      } else {
+        throw err;
+      }
+    }
     console.log('Veo3 operation started:', operation.name);
 
     // Step 2: poll until done
