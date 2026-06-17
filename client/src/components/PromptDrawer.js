@@ -88,6 +88,8 @@ const PromptDrawer = () => {
     setVideoStyleId,
     outputMode,
     setOutputMode,
+    pendingExtend,
+    clearPendingExtend,
     isLoading,
     setLoading,
     addRow
@@ -116,6 +118,13 @@ const PromptDrawer = () => {
 
   const [prompt, setPrompt] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(true);
+
+  useEffect(() => {
+    if (pendingExtend) {
+      setIsSearchMode(false);
+      clearPendingExtend();
+    }
+  }, [pendingExtend, clearPendingExtend]);
   const fileInputRef = useRef(null);
   const textRef = useRef(null);
   const [showExamples, setShowExamples] = useState(false);

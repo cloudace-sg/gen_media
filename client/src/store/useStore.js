@@ -45,6 +45,21 @@ const useStore = create(
       outputMode: 'image',
       setOutputMode: (mode) => set({ outputMode: mode }),
 
+      // One-shot flag: when true, PromptDrawer switches to Create+Video mode on next render
+      pendingExtend: false,
+      triggerExtend: (videoItem) => {
+        get().stageImage({
+          id: videoItem.key,
+          title: videoItem.key.split('/').pop(),
+          url: videoItem.url,
+          thumbnail: videoItem.url,
+          source: videoItem.type.replace('_', ' '),
+          mediaType: 'video',
+        });
+        set({ outputMode: 'video', pendingExtend: true });
+      },
+      clearPendingExtend: () => set({ pendingExtend: false }),
+
       // Generation settings (images)
       generationSettings: {
         imageCount: 1,

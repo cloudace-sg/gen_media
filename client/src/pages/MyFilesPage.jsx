@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { listFiles, getSignedUrl, deleteFiles } from '../services/api';
 import { useStore } from '../store/useStore';
 import PageHeader from '../components/ui/PageHeader';
-import { Image as ImageIcon, Video, Trash2, Download, Info, ChevronDown, Plus } from 'lucide-react';
+import { Image as ImageIcon, Video, Trash2, Download, Info, ChevronDown, Plus, ArrowRight } from 'lucide-react';
 
 // Custom dropdown component matching the canvas page style
 const TypeDropdown = ({ value, onChange, options }) => {
@@ -63,7 +63,7 @@ export default function MyFilesPage() {
   const [loading, setLoading] = React.useState(false);
   const [selected, setSelected] = React.useState(null);
   const [selection, setSelection] = React.useState(new Set());
-  const { stageImage } = useStore();
+  const { stageImage, triggerExtend } = useStore();
   const navigate = useNavigate();
 
   const typeOptions = [
@@ -125,6 +125,11 @@ export default function MyFilesPage() {
     // Don't auto-navigate — let user stage multiple items then go to canvas manually
   };
 
+  const handleExtend = (it) => {
+    triggerExtend(it);
+    navigate('/');
+  };
+
   const handleDownload = async (it) => {
     try {
       const a = document.createElement('a');
@@ -159,6 +164,9 @@ export default function MyFilesPage() {
       </div>
       <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
         <button onClick={() => handleUseAsReference(it)} className="w-8 h-8 rounded bg-accent text-black hover:bg-accent-hover flex items-center justify-center" title="Use as reference"><Plus className="w-4 h-4" /></button>
+        {String(it.contentType || '').startsWith('video/') && (
+          <button onClick={() => handleExtend(it)} className="w-8 h-8 rounded bg-purple-600 text-white hover:bg-purple-500 flex items-center justify-center" title="Extend video"><ArrowRight className="w-4 h-4" /></button>
+        )}
         <button onClick={() => handleDownload(it)} className="w-8 h-8 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center" title="Download"><Download className="w-4 h-4" /></button>
         <button onClick={() => setSelected(it)} className="w-8 h-8 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center" title="Details"><Info className="w-4 h-4" /></button>
       </div>
