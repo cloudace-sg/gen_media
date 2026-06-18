@@ -87,6 +87,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-18 | `580d03f` | feat | Ingredients to Video workflow UI + fix Vertex AI video download URI detection |
 | 2026-06-18 | `2011174` | feat | add camera movement/angle chip panel to video prompt UI |
 | 2026-06-18 | `2bba155` | docs | sync Obsidian vault — Jun 18 PM session (Vertex AI, Ingredients UI, camera chips) |
+| 2026-06-18 | `1f9ae8d` | docs | hook entries for 2bba155 push |
 
 ---
 
@@ -139,6 +140,14 @@ A major capability and UX session:
 7. **Ingredients to Video workflow UI** (`580d03f`): PromptDrawer gains three video sub-mode tabs — **Standard / Ingredients / Extend**. In Ingredients mode, three labeled slots (Character, Product, Scene) each support upload or AI generation via Nano Banana. Per-slot prompts call `generateImages()` (1×1:1 image), fill the slot thumbnail, and add a workspace row. Filled slot URLs become `referenceImageUrls` sent to Veo. In Extend mode, the UI shows whether a Veo video is staged and routes to scene extension.
 
 8. **Camera chip panel** (`2011174`): Collapsible Camera section below the negative prompt field in video + create mode. Three chip groups: Movement (13 options including static, zoom, dolly, pan, tracking, handheld, aerial), Angle (7 options), Shot (5 options). Selected chips are appended to the final prompt string at generation time — the prompt textarea stays clean. Active chip count shown as a badge on the collapsed header.
+
+## SOW Completion (as of 2026-06-18)
+
+4 of 32 SOW items complete (13%) + 6 new additions beyond original scope. See [[SOW_STATUS]] for full tracker.
+
+Done: SOW-0 (Veo GA migration), SOW-2 (Ingredients + analyzeReferenceImages), SOW-4 (4K resolution), SOW-8 (video scene extension).
+Partial: SOW-7 (staging works; GCS metadata tagging missing).
+New additions: Ingredients UI, Camera chips, RAI auto-retry, Vertex AI download hardening, Firebase session resilience, personGeneration wiring.
 
 ## Key Decisions
 - Use GCS URI (gs://) instead of inline encodedVideo bytes when passing video references to Veo 3.1 — the API rejects encodedVideo with INVALID_ARGUMENT; GCS URI is the only supported video input method.

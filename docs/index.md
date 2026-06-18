@@ -16,6 +16,7 @@ AI-powered media generation platform built on Google Gemini (image) and Veo (vid
 - [[Image & Video Search]]
 - [[Git History & Key Decisions]]
 - [[Session-Jun18-PM]] — Vertex AI migration, Ingredients UI, camera chips
+- [[SOW_STATUS]] — live SOW completion tracker (4/32 done + 6 new additions)
 
 ## Quick Links
 - [[Architecture]] — React + Express + nginx, Cloud Run deployment
