@@ -195,9 +195,9 @@ export const AuthProvider = ({ children }) => {
           // Update role again after token refresh
           await updateUserRole(current)
         } catch (error) {
-          // If postSignIn returns any error (>=400), sign the user out
+          // Only sign out on explicit auth rejections — not on server restarts (5xx/network)
           const status = error.response?.status || error.status
-          if (typeof status === 'number' && status >= 400) {
+          if (status === 401 || status === 403) {
             await firebaseSignOut(auth)
             setUser(null)
             setUserRole(null)
@@ -205,7 +205,8 @@ export const AuthProvider = ({ children }) => {
             setLoading(false)
             return
           }
-          console.warn('postSignIn error:', error)
+          // 5xx or network error during deploy — keep user signed in, retry will happen on next navigation
+          console.warn('postSignIn transient error (keeping session):', status, error.message)
         }
       }
     })
@@ -321,6 +322,7 @@ export const AuthProvider = ({ children }) => {
   const signInWithEmail = async (email) => {
     if (!isInitialized || !auth) {
       console.error("Firebase auth is not initialized")
+      setEmailLinkError("Authentication is not ready. Please refresh the page and try again.")
       return
     }
 
