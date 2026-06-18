@@ -67,6 +67,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-17 | `af0a708` | docs | sync Obsidian vault — full session sync Jun 17 2026 |
 | 2026-06-18 | —        | fix | Firestore settings/auth corrupted — exceptions stored as JSON string instead of map array; fixed directly in DB |
 | 2026-06-18 | —        | fix | Firebase apiKey was empty string in deployed bundle; triggered Cloud Build rebuild to bake config correctly |
+| 2026-06-18 | `cbc86e0` | docs | sync Obsidian vault — session sync Jun 18 2026 |
+| 2026-06-18 | `2d346d1` | docs | update Authentication.md with postSignIn trusted domain logic and Firestore incident |
 
 ---
 

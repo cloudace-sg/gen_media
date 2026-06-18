@@ -120,6 +120,7 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-18** `cbc86e0`: pushed to GitHub
 - **2026-06-18** `af0a708`: Cloud Build → Cloud Run ✅ SUCCESS (build ada5ca4a) — fix empty Firebase apiKey in bundle (rebuild)
 - **2026-06-18** —: Firestore settings/auth fixed directly in DB — exceptions field was JSON string, now proper map array; angie.ng@cloud-ace.com granted admin role
 - **2026-06-17** `05c03fd`: Cloud Build → Cloud Run ✅ SUCCESS — auth: trusted domain auto-role
