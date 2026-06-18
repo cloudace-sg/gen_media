@@ -10,6 +10,12 @@ const INGREDIENT_SLOTS = [
   { key: 'scene',     label: 'Scene',     icon: Globe,  placeholder: 'e.g. glass office, city skyline at dusk' },
 ];
 
+const CAMERA_CHIPS = [
+  { group: 'Movement', chips: ['static shot', 'slow zoom in', 'slow zoom out', 'dolly in', 'dolly out', 'pan left', 'pan right', 'tilt up', 'tilt down', 'tracking shot', 'handheld', 'aerial drone', 'crane shot'] },
+  { group: 'Angle',    chips: ['eye level', 'low angle', 'high angle', 'bird\'s eye view', 'over-the-shoulder', 'dutch angle', 'POV'] },
+  { group: 'Shot',     chips: ['extreme close-up', 'close-up', 'medium shot', 'wide shot', 'establishing shot'] },
+];
+
 // Custom dropdown component for purpose selection
 const PurposeDropdown = ({ value, onChange, options, placeholder = "Select purpose..." }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -128,6 +134,8 @@ const PromptDrawer = () => {
   const [generatingSlot, setGeneratingSlot] = useState(null);
   const [slotPrompts, setSlotPrompts] = useState({ character: '', product: '', scene: '' });
   const [slotPromptOpen, setSlotPromptOpen] = useState({ character: false, product: false, scene: false });
+  const [selectedCameraChips, setSelectedCameraChips] = useState(new Set());
+  const [cameraOpen, setCameraOpen] = useState(false);
   const characterFileRef = useRef(null);
   const productFileRef = useRef(null);
   const sceneFileRef = useRef(null);
@@ -402,8 +410,10 @@ const PromptDrawer = () => {
           } catch (_) {}
         }
       }
+      const cameraTerms = [...selectedCameraChips].join(', ');
+      const finalPrompt = cameraTerms ? `${prompt}, ${cameraTerms}` : prompt;
       const res = await generateVideo({
-        prompt,
+        prompt: finalPrompt,
         negativePrompt: negativePrompt || undefined,
         aspectRatio: videoSettings.aspectRatio,
         resolution: videoSettings.resolution,
@@ -682,6 +692,67 @@ const PromptDrawer = () => {
               className="w-full p-2 rounded bg-dark-bg border border-dark-border text-dark-text placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
+
+          {/* Camera chips — video create mode only */}
+          {outputMode === 'video' && !isSearchMode && (
+            <div className="border border-dark-border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setCameraOpen(o => !o)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-dark-bg hover:bg-dark-border transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Camera className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-xs font-medium text-dark-text">Camera</span>
+                  {selectedCameraChips.size > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-purple-600 text-white text-xs leading-none">{selectedCameraChips.size}</span>
+                  )}
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-dark-text-secondary transition-transform ${cameraOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {cameraOpen && (
+                <div className="p-2 space-y-2 border-t border-dark-border">
+                  {CAMERA_CHIPS.map(({ group, chips }) => (
+                    <div key={group}>
+                      <div className="text-xs text-dark-text-secondary mb-1">{group}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {chips.map(chip => {
+                          const active = selectedCameraChips.has(chip);
+                          return (
+                            <button
+                              key={chip}
+                              type="button"
+                              onClick={() => setSelectedCameraChips(prev => {
+                                const next = new Set(prev);
+                                active ? next.delete(chip) : next.add(chip);
+                                return next;
+                              })}
+                              className={`px-2 py-1 rounded text-xs transition-colors ${
+                                active
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-dark-border text-dark-text hover:bg-gray-200'
+                              }`}
+                            >
+                              {chip}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {selectedCameraChips.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCameraChips(new Set())}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Improved suggestion preview (YAML-like) */}
           {improved && (
