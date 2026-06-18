@@ -64,7 +64,9 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-17 | `5f22465` | feat | migrate Veo model to veo-3.1-generate-001 GA (SOW-0) |
 | 2026-06-17 | `a388441` | fix | remove duplicate let operation declaration crashing Express |
 | 2026-06-17 | `05c03fd` | fix | auto-grant default role to trusted domain users on postSignIn |
-| 2026-06-17 | `05c03fd` | fix | auto-grant default role to trusted domain users on postSignIn |
+| 2026-06-17 | `af0a708` | docs | sync Obsidian vault — full session sync Jun 17 2026 |
+| 2026-06-18 | —        | fix | Firestore settings/auth corrupted — exceptions stored as JSON string instead of map array; fixed directly in DB |
+| 2026-06-18 | —        | fix | Firebase apiKey was empty string in deployed bundle; triggered Cloud Build rebuild to bake config correctly |
 
 ---
 
