@@ -375,6 +375,34 @@ class GeminiService {
     return `${prompt} — up to 8s, ${ar} ${res}.`;
   }
 
+  // Analyzes up to 3 reference images via Gemini vision and returns a compact description
+  // string to inject into the Veo prompt for better subject/style consistency.
+  async analyzeReferenceImages(referenceImageParts) {
+    try {
+      const imageParts = referenceImageParts.map(ref => ({
+        inlineData: { mimeType: ref.image.mimeType, data: ref.image.imageBytes }
+      }));
+      const { candidates } = await this.genAI.models.generateContent({
+        model: MODELS.text,
+        contents: [{
+          role: 'user',
+          parts: [
+            ...imageParts,
+            { text: 'Analyze the subject(s) in these reference images. Return a single concise sentence (max 120 chars) describing: the main subject, its dominant colors, surface material/texture, and overall visual style. Focus only on visually observable traits that a video generation model should preserve. No commentary, just the description.' }
+          ]
+        }]
+      });
+      const text = candidates?.[0]?.content?.parts?.filter(p => !p.thought).map(p => p.text).join('').trim();
+      if (text && text.length > 0) {
+        console.log('Reference image analysis:', text);
+        return text;
+      }
+    } catch (err) {
+      console.warn('analyzeReferenceImages failed, skipping:', err.message);
+    }
+    return null;
+  }
+
   /**
    * Generate a video using Veo 3. Supports text-to-video or image-to-video.
    * @param {Object} params
@@ -502,10 +530,19 @@ class GeminiService {
       console.log('No image or video provided for video generation - text-to-video mode');
     }
 
+    // Analyze reference images and inject visual description into prompt for better subject consistency
+    let refAnalysis = null;
+    if (referenceImageParts && referenceImageParts.length > 0) {
+      refAnalysis = await this.analyzeReferenceImages(referenceImageParts);
+    }
+    const basePrompt = refAnalysis
+      ? `${prompt} Reference subject details: ${refAnalysis}`
+      : prompt;
+
     // Step 1: kick off generation with optional image/video/reference input
     const requestParams = {
       model: MODELS.video,
-      prompt: `You're an IQ 200 specialist in brand / product marketing. Never include font names, brand names, or technical specifications in the visual content. ${prompt}`,
+      prompt: `You're an IQ 200 specialist in brand / product marketing. Never include font names, brand names, or technical specifications in the visual content. ${basePrompt}`,
       config: {
         aspectRatio,
         resolution,

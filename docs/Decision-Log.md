@@ -73,6 +73,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-18 | `0c3506e` | docs | add Decision-Log entry for commit 8b30acd |
 | 2026-06-18 | —        | chore | save point created — stable state after Jun 18 session |
 | 2026-06-18 | —        | research | Veo 3.1 audio capability investigation — native audio generation support confirmed |
+| 2026-06-18 | `752a30e` | docs | log save point and Veo 3.1 audio research for Jun 18 session |
 
 ---
 
