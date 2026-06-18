@@ -645,6 +645,10 @@ class GeminiService {
     } catch (_) {}
 
     if (operation?.error) {
+      const errMsg = operation.error.message || '';
+      if (operation.error.code === 3 && /responsible ai|rai|violates|input image/i.test(errMsg)) {
+        throw new Error('One of your reference images was blocked by Veo\'s safety filter. Try removing images with real people\'s faces or sensitive content and generate again.');
+      }
       throw new Error(`Veo 3 operation error: ${JSON.stringify(operation.error)}`);
     }
 
