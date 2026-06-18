@@ -713,10 +713,29 @@ class GeminiService {
     const filename = `veo3_${Date.now()}.mp4`;
     const filepath = path.join(absUploadsDir, filename);
 
-    console.log('Video file ref keys:', videoFileRef ? Object.keys(videoFileRef) : 'null', '| uri:', videoFileRef?.uri || videoFileRef?.videoUri || 'none');
+    console.log('Video file ref full:', JSON.stringify(videoFileRef));
     console.log('Downloading video to:', filepath);
     console.log('Directory exists:', fs.existsSync(absUploadsDir));
     console.log('Directory is writable:', (() => { try { fs.accessSync(absUploadsDir, fs.constants.W_OK); return true; } catch { return false; } })());
+
+    // Extract a usable URI from whatever shape Vertex AI or Developer API returns
+    function extractVideoUri(ref) {
+      if (!ref) return null;
+      for (const key of ['uri', 'videoUri', 'downloadUri', 'gcsUri', 'name', 'fileUri']) {
+        const val = ref[key];
+        if (val && typeof val === 'string' && (val.startsWith('gs://') || val.startsWith('https://') || val.startsWith('http://'))) {
+          return val;
+        }
+      }
+      // Deep search one level for nested objects
+      for (const val of Object.values(ref)) {
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          const nested = extractVideoUri(val);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    }
 
     // Robust download with retries for rare partial writes
     async function downloadWithVerify(fileRef, destPath, minBytes = 200 * 1024, maxAttempts = 5) {
@@ -727,7 +746,8 @@ class GeminiService {
           await new Promise(r => setTimeout(r, attempt === 1 ? 0 : 250 * attempt)); // small backoff
 
           await (async () => {
-            const uri = fileRef?.uri || fileRef?.videoUri || fileRef?.downloadUri;
+            const uri = extractVideoUri(fileRef);
+            console.log(`Download attempt ${attempt}: uri=${uri}`);
             if (uri && uri.startsWith('gs://')) {
               // Vertex AI — GCS URI: use storage SDK to download
               const { Storage } = require('@google-cloud/storage');
@@ -745,7 +765,7 @@ class GeminiService {
                 writer.on('error', reject);
               });
             } else {
-              // Developer API — Files API reference
+              // Developer API — Files API reference (also fallback if no URI found)
               await this.genAI.files.download({ file: fileRef, downloadPath: destPath });
             }
           })();

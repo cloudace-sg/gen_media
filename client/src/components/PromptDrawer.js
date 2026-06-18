@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Image as ImageIcon, Film, X, Upload as UploadIcon, Loader2, Lightbulb, ChevronLeft, ChevronRight, HelpCircle, ChevronDown, Target, Megaphone, FileText, Users, Globe, Camera, Video, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, Film, X, Upload as UploadIcon, Loader2, Lightbulb, ChevronLeft, ChevronRight, HelpCircle, ChevronDown, Target, Megaphone, FileText, Users, Globe, Camera, Video, Sparkles, Wand2, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { searchImages, searchVideos, generateImages, remixImages, uploadImages, generateVideo, improvePrompt, randomPrompt, listStyles } from '../services/api';
-import { Wand2 } from 'lucide-react';
+
+const INGREDIENT_SLOTS = [
+  { key: 'character', label: 'Character', icon: Users, placeholder: 'e.g. professional woman in modern office attire' },
+  { key: 'product',   label: 'Product',   icon: Target, placeholder: 'e.g. sleek white smart speaker on marble' },
+  { key: 'scene',     label: 'Scene',     icon: Globe,  placeholder: 'e.g. glass office, city skyline at dusk' },
+];
 
 // Custom dropdown component for purpose selection
 const PurposeDropdown = ({ value, onChange, options, placeholder = "Select purpose..." }) => {
@@ -118,6 +123,15 @@ const PromptDrawer = () => {
 
   const [prompt, setPrompt] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(true);
+  const [videoSubMode, setVideoSubMode] = useState('standard'); // 'standard' | 'ingredients' | 'extend'
+  const [ingredientSlots, setIngredientSlots] = useState({ character: null, product: null, scene: null });
+  const [generatingSlot, setGeneratingSlot] = useState(null);
+  const [slotPrompts, setSlotPrompts] = useState({ character: '', product: '', scene: '' });
+  const [slotPromptOpen, setSlotPromptOpen] = useState({ character: false, product: false, scene: false });
+  const characterFileRef = useRef(null);
+  const productFileRef = useRef(null);
+  const sceneFileRef = useRef(null);
+  const slotFileRefs = { character: characterFileRef, product: productFileRef, scene: sceneFileRef };
 
   useEffect(() => {
     if (pendingExtend) {
@@ -274,6 +288,36 @@ const PromptDrawer = () => {
     }
   };
 
+  const handleSlotFileChange = (slotKey) => async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setIngredientSlots(prev => ({ ...prev, [slotKey]: { url: ev.target.result, title: file.name } }));
+    };
+    reader.readAsDataURL(file);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleGenerateSlot = async (slotKey) => {
+    const slotPrompt = slotPrompts[slotKey];
+    if (!slotPrompt.trim()) return;
+    setGeneratingSlot(slotKey);
+    try {
+      const res = await generateImages(slotPrompt, 'Product-Focused Advertisement', 1, '1:1', 'freeform', []);
+      const images = Array.isArray(res.results) && res.results.length > 0 ? res.results : [res.result].filter(Boolean);
+      if (images.length > 0 && images[0].url) {
+        setIngredientSlots(prev => ({ ...prev, [slotKey]: { url: images[0].url, title: slotPrompt } }));
+        setSlotPromptOpen(prev => ({ ...prev, [slotKey]: false }));
+        addRow({ type: 'generate', title: `${slotKey.toUpperCase()} (ingredient)`, images, prompt: slotPrompt });
+      }
+    } catch (err) {
+      setErrorMsg(`Failed to generate ${slotKey}: ${err.message}`);
+    } finally {
+      setGeneratingSlot(null);
+    }
+  };
+
   const handleSearch = async () => {
     if (!prompt.trim()) return;
     setLoading('search', true);
@@ -331,26 +375,31 @@ const PromptDrawer = () => {
       let imageUrl;
       let videoUrl;
       let referenceImageUrls;
-      if (stagedImages.length > 0) {
+
+      if (videoSubMode === 'ingredients') {
+        // Use ingredient slots as reference images — filter out empty slots
+        const filledSlots = INGREDIENT_SLOTS.map(s => ingredientSlots[s.key]).filter(Boolean);
+        if (filledSlots.length > 0) {
+          referenceImageUrls = filledSlots.map(s => s.url);
+        }
+      } else if (videoSubMode === 'extend') {
+        const veoVideoRefs = stagedImages.filter(r => r.mediaType === 'video' && r.source === 'AI Generated (Veo 3)');
+        if (veoVideoRefs.length > 0) videoUrl = veoVideoRefs[0].url;
+      } else if (stagedImages.length > 0) {
         const imageRefs = stagedImages.filter(r => r.mediaType !== 'video');
         const veoVideoRefs = stagedImages.filter(r => r.mediaType === 'video' && r.source === 'AI Generated (Veo 3)');
         const otherVideoRefs = stagedImages.filter(r => r.mediaType === 'video' && r.source !== 'AI Generated (Veo 3)');
-        // Always use image refs as style/character references, not as Veo start frame
         if (imageRefs.length > 0) {
           referenceImageUrls = imageRefs.slice(0, 3).map(r => r.url);
         }
-        // Veo scene extension: use Veo-generated video if available, no image refs
         if (veoVideoRefs.length > 0 && !imageUrl && !referenceImageUrls) {
           videoUrl = veoVideoRefs[0].url;
         }
-        // Non-Veo video: extract a frame and pass as character/style reference (ingredients mode)
-        // Using referenceImageUrls (not imageUrl) so Veo treats it as visual inspiration,
-        // not as a start frame — allows the prompt to describe a different scene.
         if (!videoUrl && !imageUrl && !referenceImageUrls && otherVideoRefs.length > 0) {
           try {
             const frame = await extractLastFrame(otherVideoRefs[0].url);
             referenceImageUrls = [frame];
-          } catch (_) { /* skip silently if frame extraction fails */ }
+          } catch (_) {}
         }
       }
       const res = await generateVideo({
@@ -422,6 +471,133 @@ const PromptDrawer = () => {
             </div>
           </div>
         </div>
+
+        {/* Video sub-mode tabs (only when outputMode=video and create mode) */}
+        {outputMode === 'video' && !isSearchMode && (
+          <div className="flex gap-1 p-1 bg-dark-bg rounded-lg">
+            {[
+              { key: 'standard',    label: 'Standard' },
+              { key: 'ingredients', label: 'Ingredients' },
+              { key: 'extend',      label: 'Extend' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setVideoSubMode(key)}
+                className={`flex-1 h-8 rounded text-xs font-medium transition-colors ${
+                  videoSubMode === key ? 'bg-purple-600 text-white' : 'text-dark-text-secondary hover:text-dark-text'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Ingredients slot panel */}
+        {outputMode === 'video' && !isSearchMode && videoSubMode === 'ingredients' && (
+          <div className="space-y-2">
+            <p className="text-xs text-dark-text-secondary">
+              Fill up to 3 slots. Character is AI-generated with Nano Banana; Product and Scene can be uploaded or generated.
+            </p>
+            {INGREDIENT_SLOTS.map(({ key, label, icon: SlotIcon, placeholder }) => {
+              const slot = ingredientSlots[key];
+              const isGen = generatingSlot === key;
+              const promptOpen = slotPromptOpen[key];
+              return (
+                <div key={key} className="border border-dark-border rounded-lg overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-dark-bg">
+                    <SlotIcon className="w-4 h-4 text-accent flex-shrink-0" />
+                    <span className="text-xs font-medium text-dark-text flex-1">{label}</span>
+                    {slot && (
+                      <button
+                        type="button"
+                        onClick={() => setIngredientSlots(prev => ({ ...prev, [key]: null }))}
+                        className="text-dark-text-secondary hover:text-red-400"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {slot ? (
+                    <div className="relative">
+                      <img src={slot.url} alt={slot.title} className="w-full h-28 object-cover" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1">
+                        <p className="text-xs text-white truncate">{slot.title}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2 space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          ref={slotFileRefs[key]}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={handleSlotFileChange(key)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => slotFileRefs[key].current?.click()}
+                          className="flex-1 h-8 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1"
+                        >
+                          <UploadIcon className="w-3.5 h-3.5" /> Upload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSlotPromptOpen(prev => ({ ...prev, [key]: !prev[key] }))}
+                          className="flex-1 h-8 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1"
+                        >
+                          <Wand2 className="w-3.5 h-3.5" /> AI Generate
+                        </button>
+                      </div>
+                      {promptOpen && (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={slotPrompts[key]}
+                            onChange={(e) => setSlotPrompts(prev => ({ ...prev, [key]: e.target.value }))}
+                            onKeyDown={(e) => e.key === 'Enter' && handleGenerateSlot(key)}
+                            placeholder={placeholder}
+                            className="flex-1 p-2 text-xs rounded bg-dark-bg border border-dark-border text-dark-text placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-accent"
+                          />
+                          <button
+                            type="button"
+                            disabled={!slotPrompts[key].trim() || isGen}
+                            onClick={() => handleGenerateSlot(key)}
+                            className={`px-3 h-8 text-xs rounded flex items-center gap-1 ${
+                              isGen || !slotPrompts[key].trim()
+                                ? 'bg-accent/40 cursor-not-allowed text-black'
+                                : 'bg-accent text-black hover:bg-accent-hover'
+                            }`}
+                          >
+                            {isGen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Extend mode hint */}
+        {outputMode === 'video' && !isSearchMode && videoSubMode === 'extend' && (
+          <div className="rounded-lg border border-dark-border bg-dark-bg p-3 space-y-2">
+            <p className="text-xs text-dark-text-secondary">
+              Stage a <span className="text-accent">Veo-generated video</span> from the workspace to extend it. Veo will continue the scene from the last frame.
+            </p>
+            {stagedImages.filter(r => r.mediaType === 'video').length > 0 ? (
+              <p className="text-xs text-green-400">
+                {stagedImages.filter(r => r.mediaType === 'video').length} video staged — ready to extend.
+              </p>
+            ) : (
+              <p className="text-xs text-yellow-400">No video staged. Click the video in the workspace to stage it first.</p>
+            )}
+          </div>
+        )}
 
         {/* Prompt composer */}
         <div className="space-y-2">
