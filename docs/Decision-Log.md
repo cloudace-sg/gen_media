@@ -70,6 +70,9 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-18 | `cbc86e0` | docs | sync Obsidian vault — session sync Jun 18 2026 |
 | 2026-06-18 | `2d346d1` | docs | update Authentication.md with postSignIn trusted domain logic and Firestore incident |
 | 2026-06-18 | `8b30acd` | docs | sync Decision-Log and Infrastructure with Jun 18 session entries |
+| 2026-06-18 | `0c3506e` | docs | add Decision-Log entry for commit 8b30acd |
+| 2026-06-18 | —        | chore | save point created — stable state after Jun 18 session |
+| 2026-06-18 | —        | research | Veo 3.1 audio capability investigation — native audio generation support confirmed |
 
 ---
 
