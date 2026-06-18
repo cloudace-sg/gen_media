@@ -604,10 +604,7 @@ class GeminiService {
     let modelFallbackTriggered = false;
     for (const model of modelChain) {
       requestParams.model = model;
-      // When falling back to preview, 4K is not supported — cap at 1080p
-      const effectiveResChain = (modelFallbackTriggered && resolutionChain[0] === '4k')
-        ? ['1080p', '720p']
-        : [...resolutionChain];
+      const effectiveResChain = [...resolutionChain];
       console.log(`Veo3 attempting model=${model}, resolutions=${effectiveResChain.join('→')}`);
       let modelFailed = false;
       for (const res of effectiveResChain) {
