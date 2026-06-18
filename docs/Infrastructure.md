@@ -120,6 +120,7 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-18** `2bba155`: pushed to GitHub
 - **2026-06-18** `2011174`: Cloud Build → Cloud Run ✅ SUCCESS (build ff1e0d95) — camera movement/angle chip panel
 - **2026-06-18** `580d03f`: Cloud Build → Cloud Run ✅ SUCCESS (build 0ad832ec) — Ingredients to Video UI + extractVideoUri download fix
 - **2026-06-18** `9e0899b`: Cloud Build → Cloud Run ✅ SUCCESS — RAI auto-retry (face photo → text-to-video fallback)

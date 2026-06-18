@@ -86,6 +86,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-18 | `9e0899b` | fix | auto-retry without reference images when Veo RAI blocks face photo input |
 | 2026-06-18 | `580d03f` | feat | Ingredients to Video workflow UI + fix Vertex AI video download URI detection |
 | 2026-06-18 | `2011174` | feat | add camera movement/angle chip panel to video prompt UI |
+| 2026-06-18 | `2bba155` | docs | sync Obsidian vault — Jun 18 PM session (Vertex AI, Ingredients UI, camera chips) |
 
 ---
 
