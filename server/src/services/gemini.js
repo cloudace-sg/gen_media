@@ -17,8 +17,8 @@ const { uploadFile, uploadBuffer } = require('./storage');
 const MODELS = {
   text:  'gemini-3.5-flash',               // prompt enhancement, improvement, random prompt, marketing prompt
   image: 'gemini-3.1-flash-image-preview',  // image generation + remix (generateContentStream)
-  video: 'veo-3.1-generate-001',              // GA model, 4K support; falls back to videoFallback if Developer API rejects it
-  videoFallback: 'veo-3.1-generate-preview', // Developer API (v1beta) fallback — no 4K
+  video: 'veo-3.1-generate-001',            // GA model via Vertex AI; falls back to preview on Developer API if no GCP_PROJECT_ID
+  videoFallback: 'veo-3.1-generate-preview', // Developer API fallback when Vertex AI not configured (local dev)
 };
 
 class GeminiService {
@@ -28,9 +28,16 @@ class GeminiService {
       throw new Error('GOOGLE_GEMINI_API_KEY is required');
     }
 
-    this.genAI = new GoogleGenAI({
-      apiKey: this.apiKey
-    });
+    // Developer API — text and image generation
+    this.genAI = new GoogleGenAI({ apiKey: this.apiKey });
+
+    // Vertex AI — video generation only (veo-3.1-generate-001 GA, supports 4K)
+    // Falls back to Developer API preview model when GCP_PROJECT_ID is not set (local dev)
+    const gcpProject = process.env.GCP_PROJECT_ID;
+    const gcpLocation = process.env.GCP_LOCATION || 'us-central1';
+    this.genAIVertex = gcpProject
+      ? new GoogleGenAI({ vertexai: true, project: gcpProject, location: gcpLocation })
+      : null;
   }
 
   buildSystemPrompt({ basePrompt, styleId }) {
@@ -564,9 +571,16 @@ class GeminiService {
       }
     }, null, 2));
     
+    // Use Vertex AI client for video (supports veo-3.1-generate-001 GA + 4K).
+    // Fall back to Developer API preview model when Vertex AI is not configured (local dev).
+    const videoClient = this.genAIVertex || this.genAI;
+    const videoModel = this.genAIVertex ? MODELS.video : MODELS.videoFallback;
+    requestParams.model = videoModel;
+    console.log(`Veo3 using ${this.genAIVertex ? 'Vertex AI' : 'Developer API'} client, model=${videoModel}`);
+
     // Helper: run generateVideos + poll to completion, retrying transient 503s
     const runAndPoll = async (reqParams) => {
-      let op = await this.genAI.models.generateVideos(reqParams);
+      let op = await videoClient.models.generateVideos(reqParams);
       console.log('Veo3 operation started:', op.name);
       const startedAt = Date.now();
       const maxMs = 15 * 60 * 1000;
@@ -577,7 +591,7 @@ class GeminiService {
         console.log(`Veo3 polling attempt ${pollCount}, elapsed: ${Math.round((Date.now() - startedAt) / 1000)}s`);
         await new Promise((r) => setTimeout(r, 10000));
         try {
-          op = await this.genAI.operations.getVideosOperation({ operation: op });
+          op = await videoClient.operations.getVideosOperation({ operation: op });
         } catch (pollErr) {
           if (/503|unavailable|service/i.test(pollErr.message || '')) {
             console.warn(`Veo3 transient poll error (attempt ${pollCount}), retrying: ${pollErr.message}`);
@@ -596,43 +610,24 @@ class GeminiService {
       : resolution === '1080p' ? ['1080p', '720p']
       : ['720p'];
 
-    // Model fallback chain: GA model (4K capable) → preview model (Developer API)
-    // The GA model requires Vertex AI; if the Developer API rejects it, fall back to preview.
-    const modelChain = [MODELS.video, MODELS.videoFallback];
-
     let operation;
-    let modelFallbackTriggered = false;
-    for (const model of modelChain) {
-      requestParams.model = model;
-      const effectiveResChain = [...resolutionChain];
-      console.log(`Veo3 attempting model=${model}, resolutions=${effectiveResChain.join('→')}`);
-      let modelFailed = false;
-      for (const res of effectiveResChain) {
-        requestParams.config.resolution = res;
-        try {
-          operation = await runAndPoll(requestParams);
-        } catch (err) {
-          // Model not available on this API version — try next model
-          if (/v1beta|not found|predictlongrunning|api.version/i.test(err.message || '')) {
-            console.warn(`Veo model=${model} rejected by API (${err.message}), falling back to preview`);
-            modelFailed = true;
-            break;
-          }
-          if (res !== effectiveResChain[effectiveResChain.length - 1] && /invalid|unsupported|resolution/i.test(err.message || '')) {
-            console.warn(`Veo rejected resolution=${res}, stepping down`);
-            continue;
-          }
-          throw err;
-        }
-        // Code 13 INTERNAL after operation completes = resolution not supported — step down
-        if (operation?.error?.code === 13 && res !== effectiveResChain[effectiveResChain.length - 1]) {
-          console.warn(`Veo code 13 for resolution=${res} (${aspectRatio}), stepping down to next resolution`);
+    for (const res of resolutionChain) {
+      requestParams.config.resolution = res;
+      try {
+        operation = await runAndPoll(requestParams);
+      } catch (err) {
+        if (res !== resolutionChain[resolutionChain.length - 1] && /invalid|unsupported|resolution/i.test(err.message || '')) {
+          console.warn(`Veo rejected resolution=${res}, stepping down`);
           continue;
         }
-        break;
+        throw err;
       }
-      if (!modelFailed) break;
-      modelFallbackTriggered = true;
+      // Code 13 INTERNAL after operation completes = resolution not supported — step down
+      if (operation?.error?.code === 13 && res !== resolutionChain[resolutionChain.length - 1]) {
+        console.warn(`Veo code 13 for resolution=${res} (${aspectRatio}), stepping down to next resolution`);
+        continue;
+      }
+      break;
     }
 
     // Debug: log final operation structure
