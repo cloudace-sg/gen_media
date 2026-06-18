@@ -74,6 +74,18 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-18 | —        | chore | save point created — stable state after Jun 18 session |
 | 2026-06-18 | —        | research | Veo 3.1 audio capability investigation — native audio generation support confirmed |
 | 2026-06-18 | `752a30e` | docs | log save point and Veo 3.1 audio research for Jun 18 session |
+| 2026-06-18 | `8d917af` | feat | analyzeReferenceImages — inject Gemini vision analysis into Veo prompt for Ingredients mode |
+| 2026-06-18 | `d1c7446` | fix | revert Veo model to veo-3.1-generate-preview — GA model is Vertex AI only |
+| 2026-06-18 | `009c5ee` | fix | dual Veo model fallback — try GA (4K) first, fall back to preview on API rejection |
+| 2026-06-18 | `b1d7faa` | fix | allow full resolution chain on Veo preview fallback — let resolution step-down handle 4K rejection |
+| 2026-06-18 | `939c954` | feat | migrate video generation to Vertex AI SDK for veo-3.1-generate-001 GA + 4K support |
+| 2026-06-18 | `b1cb990` | fix | friendly error message for Veo RAI input image rejection (code 3) |
+| 2026-06-18 | `9ba7d31` | fix | wire personGeneration into Veo config; default allow_adult for reference image mode |
+| 2026-06-18 | `f2e7e84` | fix | Vertex AI video download — handle GCS URI and HTTPS URI from Veo GA response |
+| 2026-06-18 | `b166637` | fix | prevent sign-out on deploy restart; fix silent email send failure |
+| 2026-06-18 | `9e0899b` | fix | auto-retry without reference images when Veo RAI blocks face photo input |
+| 2026-06-18 | `580d03f` | feat | Ingredients to Video workflow UI + fix Vertex AI video download URI detection |
+| 2026-06-18 | `2011174` | feat | add camera movement/angle chip panel to video prompt UI |
 
 ---
 
@@ -106,6 +118,26 @@ A cascade of infrastructure and API-contract fixes:
 3. **`referenceImageUrls` vs `imageUrl`** (`803fd91`): Image refs were being sent as `imageUrl` (the Veo "start frame" field), which locked the first frame but let the rest of the video drift from the prompt. Switching to `referenceImageUrls` treats the image as a style/character reference throughout the clip.
 4. **Hardcoded `GCS_BUCKET` in Dockerfile** (`e167185`): A `export GCS_BUCKET=...` line baked into the Dockerfile startup script was silently overriding the Cloud Run environment variable, routing all storage writes to the wrong bucket.
 5. **Firebase auth silent failure in production** (`576ab1a`): Create React App bakes `REACT_APP_*` vars at build time, not runtime. The vars were not passed during the Docker build step in `cloudbuild.yaml`, so Firebase never initialised and both email-link and Google sign-in silently failed. Fixed by forwarding `--build-arg` values in `cloudbuild.yaml` and exposing them as `ARG`/`ENV` in the Dockerfile.
+
+## Phase 6 — Vertex AI Migration, Ingredients UI, and Camera Controls (June 18 2026)
+
+A major capability and UX session:
+
+1. **`analyzeReferenceImages`** (`8d917af`): New method on `GeminiService` that passes up to 3 staged reference images to `gemini-3.5-flash` (text model with vision) and returns a compact visual description. The description is injected into the Veo prompt as `"Reference subject details: ..."` for better character/scene consistency. Uses `MODELS.text`, not the image model (Nano Banana).
+
+2. **Vertex AI migration for Veo GA** (`939c954`): `veo-3.1-generate-001` GA is Vertex AI only — it returns a 404 on the Gemini Developer API. The fix initialises a second `GoogleGenAI` client with `{ vertexai: true, project: GCP_PROJECT_ID, location: GCP_LOCATION }`. Video generation uses this client when `GCP_PROJECT_ID` is set; falls back to Developer API + `veo-3.1-generate-preview` for local dev. No infrastructure changes needed — `GCP_PROJECT_ID` was already set as a Cloud Run env var and the service account already had `roles/aiplatform.user`.
+
+3. **Vertex AI video download** (`f2e7e84`, `580d03f`): Vertex AI returns a GCS URI (`gs://...`) not a Files API reference. The download handler was extended to detect URI type and route accordingly: GCS URI → `@google-cloud/storage` SDK download; HTTPS URI → axios stream; fallback → `genAI.files.download`. Commit `580d03f` further hardened this with `extractVideoUri()` — checks all known field names (`uri`, `videoUri`, `downloadUri`, `gcsUri`, `fileUri`, `name`) plus a one-level deep object scan, and logs the full `videoFileRef` shape for debugging future API changes.
+
+4. **`personGeneration` wiring** (`9ba7d31`): The param was being read from request body but never added to `requestParams.config`. Now included. Auto-defaults to `allow_adult` when reference images are present.
+
+5. **Veo RAI face photo block + auto-retry** (`9e0899b`): `veo-3.1-generate-001` blocks real human face photos as Ingredients INPUT (anti-deepfake policy, operation error code 3). Cannot be bypassed with `personGeneration`. Auto-retry implemented: on code 3, strips all referenceImages from config and retries as text-to-video using the visual description already extracted by `analyzeReferenceImages`. User sees a warning but gets a video. Clean workaround: generate the person with Nano Banana first, then use the AI-generated image as ingredient.
+
+6. **Firebase sign-out on deploy restart** (`b166637`): `postSignIn` was returning 5xx during Cloud Run cold start after deploy, which triggered `firebaseSignOut`. Fixed — only 401/403 sign the user out; 5xx and network errors log a warning and keep the session. Also fixed `signInWithEmail` silently returning when Firebase not initialised — now sets a visible error message.
+
+7. **Ingredients to Video workflow UI** (`580d03f`): PromptDrawer gains three video sub-mode tabs — **Standard / Ingredients / Extend**. In Ingredients mode, three labeled slots (Character, Product, Scene) each support upload or AI generation via Nano Banana. Per-slot prompts call `generateImages()` (1×1:1 image), fill the slot thumbnail, and add a workspace row. Filled slot URLs become `referenceImageUrls` sent to Veo. In Extend mode, the UI shows whether a Veo video is staged and routes to scene extension.
+
+8. **Camera chip panel** (`2011174`): Collapsible Camera section below the negative prompt field in video + create mode. Three chip groups: Movement (13 options including static, zoom, dolly, pan, tracking, handheld, aerial), Angle (7 options), Shot (5 options). Selected chips are appended to the final prompt string at generation time — the prompt textarea stays clean. Active chip count shown as a badge on the collapsed header.
 
 ## Key Decisions
 - Use GCS URI (gs://) instead of inline encodedVideo bytes when passing video references to Veo 3.1 — the API rejects encodedVideo with INVALID_ARGUMENT; GCS URI is the only supported video input method.

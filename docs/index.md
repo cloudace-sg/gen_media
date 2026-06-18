@@ -15,6 +15,7 @@ AI-powered media generation platform built on Google Gemini (image) and Veo (vid
 - [[Authentication]]
 - [[Image & Video Search]]
 - [[Git History & Key Decisions]]
+- [[Session-Jun18-PM]] — Vertex AI migration, Ingredients UI, camera chips
 
 ## Quick Links
 - [[Architecture]] — React + Express + nginx, Cloud Run deployment
@@ -28,7 +29,7 @@ AI-powered media generation platform built on Google Gemini (image) and Veo (vid
 ## Stack
 - **Frontend:** React, Zustand, Tailwind CSS, Lucide icons
 - **Backend:** Node.js / Express
-- **AI:** Google Gemini (`gemini-3.1-flash-image-preview`, `gemini-3.5-flash`), Veo (`veo-3.1-generate-preview`)
+- **AI:** Google Gemini (`gemini-3.1-flash-image-preview` image, `gemini-3.5-flash` text), Veo (`veo-3.1-generate-001` GA via Vertex AI, fallback `veo-3.1-generate-preview` on Developer API)
 - **Storage:** Google Cloud Storage (`gen-media-demo-assets-sg`)
 - **Auth:** Firebase Authentication (email link + Google)
 - **Deploy:** Cloud Run via Cloud Build (`strong-kit-475107-k1`, `asia-southeast1`)

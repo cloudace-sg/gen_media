@@ -120,6 +120,11 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-18** `2011174`: Cloud Build → Cloud Run ✅ SUCCESS (build ff1e0d95) — camera movement/angle chip panel
+- **2026-06-18** `580d03f`: Cloud Build → Cloud Run ✅ SUCCESS (build 0ad832ec) — Ingredients to Video UI + extractVideoUri download fix
+- **2026-06-18** `9e0899b`: Cloud Build → Cloud Run ✅ SUCCESS — RAI auto-retry (face photo → text-to-video fallback)
+- **2026-06-18** `b166637`: Cloud Build → Cloud Run ✅ SUCCESS — prevent sign-out on deploy restart
+- **2026-06-18** `8d917af`: Cloud Build → Cloud Run ❌ FAILED
 - **2026-06-18** `cbc86e0`: pushed to GitHub
 - **2026-06-18** `af0a708`: Cloud Build → Cloud Run ✅ SUCCESS (build ada5ca4a) — fix empty Firebase apiKey in bundle (rebuild)
 - **2026-06-18** —: Firestore settings/auth fixed directly in DB — exceptions field was JSON string, now proper map array; angie.ng@cloud-ace.com granted admin role
