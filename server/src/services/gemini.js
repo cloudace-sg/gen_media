@@ -432,7 +432,8 @@ class GeminiService {
     const aspectRatio = params.aspectRatio === '9:16' ? '9:16' : '16:9';
     const resolution = ['4k', '1080p', '720p'].includes(params.resolution) ? params.resolution : '720p';
     const negativePrompt = params.negativePrompt || undefined;
-    const personGeneration = params.personGeneration || undefined;
+    // Default to allow_adult when reference images are present so person photos can be used as ingredients
+    const personGeneration = params.personGeneration || (Array.isArray(params.referenceImageUrls) && params.referenceImageUrls.length > 0 ? 'allow_adult' : undefined);
 
     // Optional: load reference assets
     const VIDEO_REF_WARN_BYTES = 20 * 1024 * 1024;  // 20MB — soft warning
@@ -555,6 +556,7 @@ class GeminiService {
         aspectRatio,
         resolution,
         ...(negativePrompt ? { negativePrompt } : {}),
+        ...(personGeneration ? { personGeneration } : {}),
         ...(referenceImageParts ? { referenceImages: referenceImageParts } : {})
       },
       ...(videoPart ? { video: videoPart } : !referenceImageParts && imagePart ? { image: imagePart } : {})

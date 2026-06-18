@@ -358,6 +358,7 @@ const PromptDrawer = () => {
         negativePrompt: negativePrompt || undefined,
         aspectRatio: videoSettings.aspectRatio,
         resolution: videoSettings.resolution,
+        personGeneration: 'allow_adult',
         imageUrl,
         videoUrl,
         referenceImageUrls,
