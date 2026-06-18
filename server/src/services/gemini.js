@@ -648,10 +648,34 @@ class GeminiService {
 
     if (operation?.error) {
       const errMsg = operation.error.message || '';
-      if (operation.error.code === 3 && /responsible ai|rai|violates|input image/i.test(errMsg)) {
-        throw new Error('One of your reference images was blocked by Veo\'s safety filter. Try removing images with real people\'s faces or sensitive content and generate again.');
+      if (operation.error.code === 3 && /responsible ai|rai|violates|input image/i.test(errMsg) && referenceImageParts) {
+        // Veo blocked one of the reference images (likely a real face — anti-deepfake policy).
+        // Retry as text-to-video using the visual description already extracted from the images.
+        console.warn('Veo RAI blocked reference image input — retrying as text-to-video with visual description');
+        const fallbackParams = {
+          ...requestParams,
+          config: { ...requestParams.config, referenceImages: undefined },
+          image: undefined,
+          video: undefined
+        };
+        delete fallbackParams.config.referenceImages;
+        operation = null;
+        for (const res of resolutionChain) {
+          fallbackParams.config.resolution = res;
+          try {
+            operation = await runAndPoll(fallbackParams);
+          } catch (retryErr) {
+            if (res !== resolutionChain[resolutionChain.length - 1] && /invalid|unsupported|resolution/i.test(retryErr.message || '')) continue;
+            throw retryErr;
+          }
+          if (operation?.error?.code === 13 && res !== resolutionChain[resolutionChain.length - 1]) continue;
+          break;
+        }
+        if (operation?.error) throw new Error(`Veo 3 operation error (fallback): ${JSON.stringify(operation.error)}`);
+        videoRefWarning = 'Reference image with a person was removed by Veo safety policy. Video generated from prompt description only.';
+      } else {
+        throw new Error(`Veo 3 operation error: ${JSON.stringify(operation.error)}`);
       }
-      throw new Error(`Veo 3 operation error: ${JSON.stringify(operation.error)}`);
     }
 
     const videos = operation?.response?.generatedVideos || [];
