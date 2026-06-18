@@ -17,7 +17,8 @@ const { uploadFile, uploadBuffer } = require('./storage');
 const MODELS = {
   text:  'gemini-3.5-flash',               // prompt enhancement, improvement, random prompt, marketing prompt
   image: 'gemini-3.1-flash-image-preview',  // image generation + remix (generateContentStream)
-  video: 'veo-3.1-generate-preview',          // video generation (generateVideos) — GA veo-3.1-generate-001 is Vertex AI only, preview runs on Gemini Developer API
+  video: 'veo-3.1-generate-001',              // GA model, 4K support; falls back to videoFallback if Developer API rejects it
+  videoFallback: 'veo-3.1-generate-preview', // Developer API (v1beta) fallback — no 4K
 };
 
 class GeminiService {
@@ -595,24 +596,46 @@ class GeminiService {
       : resolution === '1080p' ? ['1080p', '720p']
       : ['720p'];
 
+    // Model fallback chain: GA model (4K capable) → preview model (Developer API)
+    // The GA model requires Vertex AI; if the Developer API rejects it, fall back to preview.
+    const modelChain = [MODELS.video, MODELS.videoFallback];
+
     let operation;
-    for (const res of resolutionChain) {
-      requestParams.config.resolution = res;
-      try {
-        operation = await runAndPoll(requestParams);
-      } catch (err) {
-        if (res !== resolutionChain[resolutionChain.length - 1] && /invalid|unsupported|resolution/i.test(err.message || '')) {
-          console.warn(`Veo rejected resolution=${res}, stepping down`);
+    let modelFallbackTriggered = false;
+    for (const model of modelChain) {
+      requestParams.model = model;
+      // When falling back to preview, 4K is not supported — cap at 1080p
+      const effectiveResChain = (modelFallbackTriggered && resolutionChain[0] === '4k')
+        ? ['1080p', '720p']
+        : [...resolutionChain];
+      console.log(`Veo3 attempting model=${model}, resolutions=${effectiveResChain.join('→')}`);
+      let modelFailed = false;
+      for (const res of effectiveResChain) {
+        requestParams.config.resolution = res;
+        try {
+          operation = await runAndPoll(requestParams);
+        } catch (err) {
+          // Model not available on this API version — try next model
+          if (/v1beta|not found|predictlongrunning|api.version/i.test(err.message || '')) {
+            console.warn(`Veo model=${model} rejected by API (${err.message}), falling back to preview`);
+            modelFailed = true;
+            break;
+          }
+          if (res !== effectiveResChain[effectiveResChain.length - 1] && /invalid|unsupported|resolution/i.test(err.message || '')) {
+            console.warn(`Veo rejected resolution=${res}, stepping down`);
+            continue;
+          }
+          throw err;
+        }
+        // Code 13 INTERNAL after operation completes = resolution not supported — step down
+        if (operation?.error?.code === 13 && res !== effectiveResChain[effectiveResChain.length - 1]) {
+          console.warn(`Veo code 13 for resolution=${res} (${aspectRatio}), stepping down to next resolution`);
           continue;
         }
-        throw err;
+        break;
       }
-      // Code 13 INTERNAL after operation completes = resolution not supported — step down
-      if (operation?.error?.code === 13 && res !== resolutionChain[resolutionChain.length - 1]) {
-        console.warn(`Veo code 13 for resolution=${res} (${aspectRatio}), stepping down to next resolution`);
-        continue;
-      }
-      break;
+      if (!modelFailed) break;
+      modelFallbackTriggered = true;
     }
 
     // Debug: log final operation structure
