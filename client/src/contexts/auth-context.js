@@ -271,7 +271,16 @@ export const AuthProvider = ({ children }) => {
             window.history.replaceState({}, document.title, window.location.pathname)
           } catch (error) {
             console.error("Error signing in with email link:", error)
-            setEmailLinkError("Failed to sign in with email link. Please try again.")
+            window.history.replaceState({}, document.title, window.location.pathname)
+            localStorage.removeItem("emailForSignIn")
+            const code = error?.code || ''
+            if (code === 'auth/invalid-action-code' || code === 'auth/expired-action-code') {
+              setEmailLinkError("This sign-in link has expired or already been used. Please request a new one.")
+            } else if (code === 'auth/invalid-email') {
+              setEmailLinkError("Email address doesn't match the sign-in link. Please use the same email you entered.")
+            } else {
+              setEmailLinkError("Failed to sign in with email link. Please try again.")
+            }
           }
         }
       }

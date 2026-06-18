@@ -689,6 +689,7 @@ class GeminiService {
     const filename = `veo3_${Date.now()}.mp4`;
     const filepath = path.join(absUploadsDir, filename);
 
+    console.log('Video file ref keys:', videoFileRef ? Object.keys(videoFileRef) : 'null', '| uri:', videoFileRef?.uri || videoFileRef?.videoUri || 'none');
     console.log('Downloading video to:', filepath);
     console.log('Directory exists:', fs.existsSync(absUploadsDir));
     console.log('Directory is writable:', (() => { try { fs.accessSync(absUploadsDir, fs.constants.W_OK); return true; } catch { return false; } })());
@@ -702,7 +703,27 @@ class GeminiService {
           await new Promise(r => setTimeout(r, attempt === 1 ? 0 : 250 * attempt)); // small backoff
 
           await (async () => {
-            await this.genAI.files.download({ file: fileRef, downloadPath: destPath });
+            const uri = fileRef?.uri || fileRef?.videoUri || fileRef?.downloadUri;
+            if (uri && uri.startsWith('gs://')) {
+              // Vertex AI — GCS URI: use storage SDK to download
+              const { Storage } = require('@google-cloud/storage');
+              const gcs = new Storage();
+              const match = uri.match(/^gs:\/\/([^/]+)\/(.+)$/);
+              if (!match) throw new Error(`Invalid GCS URI: ${uri}`);
+              await gcs.bucket(match[1]).file(match[2]).download({ destination: destPath });
+            } else if (uri && (uri.startsWith('https://') || uri.startsWith('http://'))) {
+              // Vertex AI — direct HTTPS URI: download with axios
+              const response = await axios.get(uri, { responseType: 'stream' });
+              await new Promise((resolve, reject) => {
+                const writer = fs.createWriteStream(destPath);
+                response.data.pipe(writer);
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+              });
+            } else {
+              // Developer API — Files API reference
+              await this.genAI.files.download({ file: fileRef, downloadPath: destPath });
+            }
           })();
 
           // Ensure disk flush settles
