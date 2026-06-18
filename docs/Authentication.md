@@ -37,8 +37,23 @@ The gen_media project uses Firebase project `strong-kit-475107-k1` for authentic
 - If the token already carries a `role` custom claim, the user is admitted immediately.
 - Otherwise the server reads `settings/auth` from Firestore for an exceptions list and a `defaultRole`.
 - If the email is in the exceptions list, `setCustomUserClaims(uid, { role })` is called and the role is returned.
-- If no role and not in exceptions → **403** "Not invited. Contact an administrator." (invite-only enforcement).
+- If the email domain is in `trustedDomains` (`cloud-ace.com`), the user is auto-granted `defaultRole` (`editor`). Added in `05c03fd`.
+- If no role, not in exceptions, and not a trusted domain → **403** "Not invited. Contact an administrator." (invite-only enforcement).
 - `requireAdmin` middleware additionally gates admin-only routes by checking `req.user.role === 'admin'`.
+
+## Firestore `settings/auth` Document Structure
+The `postSignIn` endpoint reads `settings/auth` from Firestore. The document must use **Firestore map objects** — not JSON strings — or the exceptions lookup silently fails.
+
+Correct structure:
+```
+allowedDomains: []           (array, currently unused by postSignIn)
+defaultRole:    "editor"     (string)
+exceptions:     [            (array of map objects)
+  { email: "user@example.com", role: "admin" }
+]
+```
+
+**Incident (2026-06-18):** The `exceptions` field was stored as an array containing a raw JSON string (`['[{"email":...}]']`) instead of an array of Firestore maps. The `exceptions.find(x => x.email === ...)` lookup iterated over a string and never matched — all exception users fell through to the trusted-domain path and got `editor` instead of their configured role. Fixed directly in Firestore via REST API.
 
 ## Build-Time Config Baking (Dockerfile)
 - Create React App inlines `process.env.REACT_APP_*` values at `npm run build` time — they are **not** runtime env vars.
