@@ -679,7 +679,9 @@ class GeminiService {
     }
 
     const videos = operation?.response?.generatedVideos || [];
+    console.log('DEBUG videos[0]:', JSON.stringify(videos[0], null, 2));
     const videoFileRef = videos[0]?.video;
+    console.log('DEBUG videoFileRef:', JSON.stringify(videoFileRef, null, 2));
     if (!videoFileRef) {
       const filtered = operation?.response?.raiMediaFilteredCount;
       const reasons = operation?.response?.raiMediaFilteredReasons;
@@ -751,7 +753,7 @@ class GeminiService {
 
           await (async () => {
             const uri = extractVideoUri(fileRef);
-            console.log(`Download attempt ${attempt}: uri=${uri}`);
+            console.log(`Download attempt ${attempt}: uri=${uri}, fileRef keys=${fileRef ? Object.keys(fileRef).join(',') : 'null'}`);
             if (uri && uri.startsWith('gs://')) {
               // Vertex AI — GCS URI: use storage SDK to download
               const { Storage } = require('@google-cloud/storage');
