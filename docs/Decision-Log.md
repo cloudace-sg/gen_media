@@ -88,6 +88,13 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-18 | `2011174` | feat | add camera movement/angle chip panel to video prompt UI |
 | 2026-06-18 | `2bba155` | docs | sync Obsidian vault — Jun 18 PM session (Vertex AI, Ingredients UI, camera chips) |
 | 2026-06-18 | `1f9ae8d` | docs | hook entries for 2bba155 push |
+| 2026-06-18 | `a32acbc` | docs | add SOW_STATUS tracker — full 32-item audit with new additions |
+| 2026-06-20 | `14f1c32` | debug | log videoFileRef shape to diagnose download failure |
+| 2026-06-21 | `129c5bd` | feat | add My Files picker + fix upload response parsing in Brand Assets |
+| 2026-06-21 | `90e786e` | fix | eliminate auth initialization race — isInitialized starts true if auth is ready |
+| 2026-06-21 | `07ae1f0` | fix | My Files picker now loads from /api/files correctly |
+| 2026-06-21 | `9d392f5` | fix | unwrap generateImages response correctly in Brand Assets |
+| 2026-06-21 | `fe6bdf5` | fix | contact sheet shows preview modal before staging, not auto-navigate |
 
 ---
 

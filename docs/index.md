@@ -16,6 +16,9 @@ AI-powered media generation platform built on Google Gemini (image) and Veo (vid
 - [[Image & Video Search]]
 - [[Git History & Key Decisions]]
 - [[Session-Jun18-PM]] — Vertex AI migration, Ingredients UI, camera chips
+- [[Session-Jun19]] — Vercel Open Skills CLI global setup (find-skills + agent-skills)
+- [[Session-Jun20]] — Gemini video analysis standalone + VEO prompt pipeline (SOW-22 pre-integration)
+- [[Session-Jun21]] — Brand Assets fixes: auth race, My Files picker, generate/upload response shape, contact sheet preview modal
 - [[SOW_STATUS]] — live SOW completion tracker (4/32 done + 6 new additions)
 
 ## Quick Links
