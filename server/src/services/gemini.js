@@ -721,11 +721,15 @@ class GeminiService {
     // Extract a usable URI from whatever shape Vertex AI or Developer API returns
     function extractVideoUri(ref) {
       if (!ref) return null;
-      for (const key of ['uri', 'videoUri', 'downloadUri', 'gcsUri', 'name', 'fileUri']) {
+      for (const key of ['uri', 'videoUri', 'downloadUri', 'gcsUri', 'fileUri']) {
         const val = ref[key];
         if (val && typeof val === 'string' && (val.startsWith('gs://') || val.startsWith('https://') || val.startsWith('http://'))) {
           return val;
         }
+      }
+      // Developer API file reference — name like 'files/abc123'
+      if (ref.name && typeof ref.name === 'string' && ref.name.startsWith('files/')) {
+        return ref.name;
       }
       // Deep search one level for nested objects
       for (const val of Object.values(ref)) {
@@ -764,8 +768,11 @@ class GeminiService {
                 writer.on('finish', resolve);
                 writer.on('error', reject);
               });
+            } else if (uri && uri.startsWith('files/')) {
+              // Developer API — file name reference (e.g. 'files/abc123')
+              await this.genAI.files.download({ file: uri, downloadPath: destPath });
             } else {
-              // Developer API — Files API reference (also fallback if no URI found)
+              // Fallback: pass full fileRef and let SDK resolve it
               await this.genAI.files.download({ file: fileRef, downloadPath: destPath });
             }
           })();
