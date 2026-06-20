@@ -349,11 +349,16 @@ export const AuthProvider = ({ children }) => {
       setEmailLinkSent(true)
     } catch (error) {
       console.error("Error sending sign-in link:", error)
-      setEmailLinkError(
-        error instanceof Error
-          ? `Failed to send sign-in link: ${error.message}`
-          : "Failed to send sign-in link. Please try again.",
-      )
+      const code = error?.code || ''
+      let msg = error?.message || 'Unknown error'
+      if (code === 'auth/unauthorized-continue-uri') {
+        msg = `This domain is not authorised in Firebase. Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized domains.`
+      } else if (code === 'auth/operation-not-allowed') {
+        msg = 'Email link sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Email/Password → Email link.'
+      } else if (code === 'auth/invalid-email') {
+        msg = 'Invalid email address.'
+      }
+      setEmailLinkError(`[${code || 'error'}] ${msg}`)
     }
   }
 
