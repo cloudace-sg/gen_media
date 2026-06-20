@@ -1,10 +1,55 @@
 import React from 'react';
-import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle, Plus } from 'lucide-react';
+import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle, Plus, Star, Grid, Wand2, Download, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { useStore } from '../store/useStore';
-import { getBrandKit, updateBrandKit, uploadBrandLogos } from '../services/api';
+import { getBrandKit, updateBrandKit, uploadBrandLogos, generateImages, saveEditedImage, uploadImages } from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
+
+const ANGLE_PROMPTS = [
+  'Front view, straight on',
+  'Side profile, left',
+  'Side profile, right',
+  'Top-down flat lay',
+  '45° elevated angle',
+  'Back view',
+  'Close-up label detail',
+  'In-hand lifestyle shot',
+  'Studio white background',
+];
+
+async function buildContactSheet(imageUrls) {
+  const cols = Math.ceil(Math.sqrt(imageUrls.length));
+  const rows = Math.ceil(imageUrls.length / cols);
+  const cell = 400;
+  const gap = 8;
+  const w = cols * cell + (cols + 1) * gap;
+  const h = rows * cell + (rows + 1) * gap;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, w, h);
+  await Promise.all(imageUrls.map((url, i) => new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = gap + col * (cell + gap);
+      const y = gap + row * (cell + gap);
+      const scale = Math.min(cell / img.width, cell / img.height);
+      const sw = img.width * scale;
+      const sh = img.height * scale;
+      ctx.drawImage(img, x + (cell - sw) / 2, y + (cell - sh) / 2, sw, sh);
+      resolve();
+    };
+    img.onerror = resolve;
+    img.src = url;
+  })));
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
 
 const BrandAssetsPage = () => {
   const { brandAssets, setBrandAssets, stageImage } = useStore();
@@ -14,6 +59,19 @@ const BrandAssetsPage = () => {
   const [isUpdating, setIsUpdating] = React.useState(false);
   const logoInputRef = React.useRef(null);
   const colorPickerRef = React.useRef(null);
+
+  // Hero Asset state
+  const [heroPrompt, setHeroPrompt] = React.useState('');
+  const [heroGenerating, setHeroGenerating] = React.useState(false);
+  const [heroError, setHeroError] = React.useState('');
+  const heroUploadRef = React.useRef(null);
+
+  // ID Grid state
+  const [gridSlots, setGridSlots] = React.useState(Array(9).fill(null));
+  const [gridGenerating, setGridGenerating] = React.useState(Array(9).fill(false));
+  const [gridPrompts, setGridPrompts] = React.useState(ANGLE_PROMPTS.slice());
+  const [sheetBuilding, setSheetBuilding] = React.useState(false);
+  const gridUploadRefs = React.useRef(Array(9).fill(null).map(() => React.createRef()));
 
   const MAX_COLORS = 6;
   const ensureColorSlots = (arr) => {
@@ -26,14 +84,13 @@ const BrandAssetsPage = () => {
     (async () => {
       try {
         const kit = await getBrandKit();
-        console.log('Brand Kit loaded:', kit);
-        console.log('Logo URLs:', kit.logos);
         setBrandAssets(kit);
         setLocalColors(kit.colors || []);
-        
-        // Load the current font if it exists
-        if (kit.font) {
-          loadGoogleFont(kit.font);
+        if (kit.font) loadGoogleFont(kit.font);
+        if (Array.isArray(kit.idGrid)) {
+          const slots = Array(9).fill(null);
+          kit.idGrid.forEach((url, i) => { slots[i] = url; });
+          setGridSlots(slots);
         }
       } catch (e) {
         console.error('Failed to load brand kit:', e);
@@ -106,6 +163,104 @@ const BrandAssetsPage = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [colorPickerOpen]);
+
+  // ── Hero Asset handlers ──────────────────────────────────────────────────
+  const handleGenerateHero = async () => {
+    if (!heroPrompt.trim()) return;
+    setHeroGenerating(true);
+    setHeroError('');
+    try {
+      const results = await generateImages(heroPrompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
+      const url = results[0]?.url;
+      if (!url) throw new Error('No image returned');
+      const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      setHeroError(e.message || 'Generation failed');
+    } finally {
+      setHeroGenerating(false);
+    }
+  };
+
+  const handleUploadHero = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const results = await uploadImages([file]);
+      const url = results[0]?.url;
+      if (!url) throw new Error('Upload failed');
+      const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      setHeroError(e.message || 'Upload failed');
+    }
+    if (heroUploadRef.current) heroUploadRef.current.value = '';
+  };
+
+  const handleRemoveHero = async () => {
+    const kit = await updateBrandKit({ ...brandAssets, heroImage: null, idGrid: gridSlots.filter(Boolean) });
+    setBrandAssets(kit);
+  };
+
+  // ── ID Grid handlers ─────────────────────────────────────────────────────
+  const handleGenerateGridSlot = async (idx) => {
+    const prompt = gridPrompts[idx];
+    if (!prompt.trim()) return;
+    const next = [...gridGenerating]; next[idx] = true; setGridGenerating(next);
+    try {
+      const results = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
+      const url = results[0]?.url;
+      if (!url) throw new Error('No image returned');
+      const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      console.error('Grid slot generation failed:', e);
+    } finally {
+      const n = [...gridGenerating]; n[idx] = false; setGridGenerating(n);
+    }
+  };
+
+  const handleUploadGridSlot = async (e, idx) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const results = await uploadImages([file]);
+      const url = results[0]?.url;
+      if (!url) throw new Error('Upload failed');
+      const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      console.error('Grid slot upload failed:', e);
+    }
+    if (gridUploadRefs.current[idx]?.current) gridUploadRefs.current[idx].current.value = '';
+  };
+
+  const handleRemoveGridSlot = async (idx) => {
+    const slots = [...gridSlots]; slots[idx] = null; setGridSlots(slots);
+    const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+    setBrandAssets(kit);
+  };
+
+  const handleMakeContactSheet = async () => {
+    const filled = gridSlots.filter(Boolean);
+    if (filled.length === 0) return;
+    setSheetBuilding(true);
+    try {
+      const dataUrl = await buildContactSheet(filled);
+      const saved = await saveEditedImage({ dataUrl, originalUrl: null, replaceOriginal: false });
+      const url = saved?.url;
+      if (url) {
+        stageImage({ id: `idgrid_sheet_${Date.now()}`, title: 'ID Grid Contact Sheet', url, thumbnail: url, source: 'Brand Kit' });
+        navigate('/canvas');
+      }
+    } catch (e) {
+      console.error('Contact sheet failed:', e);
+    } finally {
+      setSheetBuilding(false);
+    }
+  };
 
   const handleUploadLogos = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -219,6 +374,56 @@ const BrandAssetsPage = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Hero Asset Section */}
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-1">
+            <Star className="h-5 w-5 text-yellow-400" />
+            <h2 className="text-lg font-semibold text-dark-text">Hero Asset</h2>
+          </div>
+          <p className="text-xs text-dark-text-secondary mb-4">A single flawless product shot used as the primary Veo reference.</p>
+
+          {brandAssets.heroImage ? (
+            <div className="relative group mb-4">
+              <img src={brandAssets.heroImage} alt="Hero asset" className="w-full h-48 object-contain bg-dark-bg border border-dark-border rounded-lg" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 bg-black/40 rounded-lg">
+                <button
+                  onClick={() => { stageImage({ id: 'brand_hero', title: 'Hero Asset', url: brandAssets.heroImage, thumbnail: brandAssets.heroImage, source: 'Brand Kit' }); navigate('/canvas'); }}
+                  className="px-3 h-8 rounded bg-accent text-black text-xs font-medium flex items-center gap-1"
+                  title="Stage as Veo reference"
+                ><Plus className="h-3 w-3" /> Use as reference</button>
+                <button onClick={handleRemoveHero} className="w-8 h-8 rounded bg-red-600 text-white flex items-center justify-center" title="Remove"><Trash2 className="h-3 w-3" /></button>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full h-32 border-2 border-dashed border-dark-border rounded-lg flex items-center justify-center mb-4">
+              <p className="text-sm text-dark-text-secondary">No hero image yet</p>
+            </div>
+          )}
+
+          <div className="flex gap-2 mb-2">
+            <input
+              value={heroPrompt}
+              onChange={e => setHeroPrompt(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleGenerateHero()}
+              placeholder="Describe your product for the hero shot…"
+              className="flex-1 px-3 h-9 bg-dark-bg border border-dark-border rounded text-sm text-dark-text focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            <button
+              onClick={handleGenerateHero}
+              disabled={heroGenerating || !heroPrompt.trim()}
+              className="px-3 h-9 rounded bg-accent text-black text-sm font-medium flex items-center gap-1 disabled:opacity-50"
+            >
+              {heroGenerating ? <Loader className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              Generate
+            </button>
+            <input ref={heroUploadRef} type="file" accept="image/*" className="hidden" onChange={handleUploadHero} />
+            <button onClick={() => heroUploadRef.current?.click()} className="px-3 h-9 rounded bg-dark-border text-dark-text text-sm flex items-center gap-1 hover:bg-gray-200">
+              <Upload className="h-4 w-4" /> Upload
+            </button>
+          </div>
+          {heroError && <p className="text-xs text-red-400 mt-1">{heroError}</p>}
         </div>
 
         {/* Colors Section */}
@@ -345,6 +550,68 @@ const BrandAssetsPage = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+        {/* ID Grid Section */}
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-6 lg:col-span-2">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-3">
+              <Grid className="h-5 w-5 text-accent" />
+              <h2 className="text-lg font-semibold text-dark-text">ID Grid</h2>
+            </div>
+            <button
+              onClick={handleMakeContactSheet}
+              disabled={sheetBuilding || gridSlots.filter(Boolean).length === 0}
+              className="px-3 h-9 rounded bg-purple-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50 hover:bg-purple-500"
+            >
+              {sheetBuilding ? <Loader className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Make Contact Sheet → Stage for Veo
+            </button>
+          </div>
+          <p className="text-xs text-dark-text-secondary mb-4">4–9 product shots from different angles. Generate or upload each slot, then stitch into a contact sheet reference.</p>
+
+          <div className="grid grid-cols-3 gap-3">
+            {gridSlots.map((url, idx) => (
+              <div key={idx} className="border border-dark-border rounded-lg overflow-hidden">
+                {url ? (
+                  <div className="relative group">
+                    <img src={url} alt={`Grid ${idx + 1}`} className="w-full h-32 object-cover bg-dark-bg" />
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 bg-black/50">
+                      <button
+                        onClick={() => { stageImage({ id: `brand_grid_${idx}`, title: `ID Grid ${idx + 1}`, url, thumbnail: url, source: 'Brand Kit' }); navigate('/canvas'); }}
+                        className="w-7 h-7 rounded bg-accent text-black flex items-center justify-center" title="Use as reference"
+                      ><Plus className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => handleRemoveGridSlot(idx)} className="w-7 h-7 rounded bg-red-600 text-white flex items-center justify-center" title="Remove"><Trash2 className="h-3 w-3" /></button>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                      <p className="text-xs text-white truncate">{gridPrompts[idx] || `Slot ${idx + 1}`}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-1.5">
+                    <input
+                      value={gridPrompts[idx] || ''}
+                      onChange={e => { const p = [...gridPrompts]; p[idx] = e.target.value; setGridPrompts(p); }}
+                      placeholder={ANGLE_PROMPTS[idx] || `Angle ${idx + 1}`}
+                      className="w-full px-2 h-7 bg-dark-bg border border-dark-border rounded text-xs text-dark-text focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleGenerateGridSlot(idx)}
+                        disabled={gridGenerating[idx] || !gridPrompts[idx]?.trim()}
+                        className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1 disabled:opacity-50"
+                      >
+                        {gridGenerating[idx] ? <Loader className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />} Generate
+                      </button>
+                      <input ref={gridUploadRefs.current[idx]} type="file" accept="image/*" className="hidden" onChange={e => handleUploadGridSlot(e, idx)} />
+                      <button onClick={() => gridUploadRefs.current[idx]?.current?.click()} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
+                        <Upload className="h-3 w-3" /> Upload
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

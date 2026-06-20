@@ -53,7 +53,9 @@ router.get('/', async (req, res) => {
           logos: Array.isArray(obj.logos) ? obj.logos : [],
           colors: Array.isArray(obj.colors) ? obj.colors : [],
           fonts: Array.isArray(obj.fonts) ? obj.fonts : [],
-          font: typeof obj.font === 'string' ? obj.font : null
+          font: typeof obj.font === 'string' ? obj.font : null,
+          heroImage: obj.heroImage || null,
+          idGrid: Array.isArray(obj.idGrid) ? obj.idGrid : [],
         };
         // Update local cache for consistency
         try { setBrandKit(kit); } catch {}
@@ -98,10 +100,10 @@ router.get('/', async (req, res) => {
   res.json(normalized);
 });
 
-// Update brand kit (colors array)
+// Update brand kit
 router.put('/', (req, res) => {
-  const { colors, logos, fonts, font } = req.body || {};
-  const updated = setBrandKit({ colors, logos, fonts, font });
+  const { colors, logos, fonts, font, heroImage, idGrid } = req.body || {};
+  const updated = setBrandKit({ colors, logos, fonts, font, heroImage, idGrid });
   res.json(updated);
 });
 

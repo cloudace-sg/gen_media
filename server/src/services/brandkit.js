@@ -79,6 +79,8 @@ function getBrandKit() {
   try {
     const raw = fs.readFileSync(BRANDKIT_FILE, 'utf-8');
     const kit = JSON.parse(raw);
+    if (!('heroImage' in kit)) kit.heroImage = null;
+    if (!('idGrid' in kit)) kit.idGrid = [];
     return kit;
   } catch (_) {}
   // If local read failed or empty, do a best-effort synchronous fallback to empty,
@@ -90,7 +92,7 @@ function getBrandKit() {
       try { fs.writeFileSync(BRANDKIT_FILE, JSON.stringify(fromGcs, null, 2)); } catch (_) {}
     }
   })().catch(()=>{});
-  return { logos: [], colors: [], fonts: [], font: null };
+  return { logos: [], colors: [], fonts: [], font: null, heroImage: null, idGrid: [] };
 }
 
 function setBrandKit(update) {
@@ -100,7 +102,9 @@ function setBrandKit(update) {
     logos: Array.isArray(update.logos) ? update.logos : current.logos,
     colors: Array.isArray(update.colors) ? update.colors : current.colors,
     fonts: Array.isArray(update.fonts) ? update.fonts : current.fonts,
-    font: typeof update.font === 'string' ? update.font : current.font
+    font: typeof update.font === 'string' ? update.font : current.font,
+    heroImage: 'heroImage' in update ? (update.heroImage || null) : current.heroImage,
+    idGrid: Array.isArray(update.idGrid) ? update.idGrid.slice(0, 9) : current.idGrid,
   };
   // Write-through local cache
   fs.writeFileSync(BRANDKIT_FILE, JSON.stringify(next, null, 2));
