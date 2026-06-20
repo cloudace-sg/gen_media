@@ -679,10 +679,8 @@ class GeminiService {
     }
 
     const videos = operation?.response?.generatedVideos || [];
-    console.log('DEBUG videos[0]:', JSON.stringify(videos[0], null, 2));
-    const videoFileRef = videos[0]?.video;
-    console.log('DEBUG videoFileRef:', JSON.stringify(videoFileRef, null, 2));
-    if (!videoFileRef) {
+    const videoFileRef = videos[0];
+    if (!videoFileRef?.video) {
       const filtered = operation?.response?.raiMediaFilteredCount;
       const reasons = operation?.response?.raiMediaFilteredReasons;
       if (filtered && filtered > 0) {
@@ -715,7 +713,7 @@ class GeminiService {
     const filename = `veo3_${Date.now()}.mp4`;
     const filepath = path.join(absUploadsDir, filename);
 
-    console.log('Video file ref full:', JSON.stringify(videoFileRef));
+    console.log('Video file ref keys:', videoFileRef ? Object.keys(videoFileRef).join(',') : 'null', '| video keys:', videoFileRef?.video ? Object.keys(videoFileRef.video).join(',') : 'none');
     console.log('Downloading video to:', filepath);
     console.log('Directory exists:', fs.existsSync(absUploadsDir));
     console.log('Directory is writable:', (() => { try { fs.accessSync(absUploadsDir, fs.constants.W_OK); return true; } catch { return false; } })());
@@ -723,13 +721,13 @@ class GeminiService {
     // Extract a usable URI from whatever shape Vertex AI or Developer API returns
     function extractVideoUri(ref) {
       if (!ref) return null;
-      for (const key of ['uri', 'videoUri', 'downloadUri', 'gcsUri', 'fileUri']) {
+      for (const key of ['uri', 'videoUri', 'downloadUri', 'gcsUri', 'name', 'fileUri']) {
         const val = ref[key];
         if (val && typeof val === 'string' && (val.startsWith('gs://') || val.startsWith('https://') || val.startsWith('http://'))) {
           return val;
         }
       }
-      // Developer API file reference — name like 'files/abc123'
+      // Developer API file reference — name like 'files/abc123' (not a URL, handled separately)
       if (ref.name && typeof ref.name === 'string' && ref.name.startsWith('files/')) {
         return ref.name;
       }
@@ -753,7 +751,7 @@ class GeminiService {
 
           await (async () => {
             const uri = extractVideoUri(fileRef);
-            console.log(`Download attempt ${attempt}: uri=${uri}, fileRef keys=${fileRef ? Object.keys(fileRef).join(',') : 'null'}`);
+            console.log(`Download attempt ${attempt}: uri=${uri}`);
             if (uri && uri.startsWith('gs://')) {
               // Vertex AI — GCS URI: use storage SDK to download
               const { Storage } = require('@google-cloud/storage');
@@ -790,8 +788,11 @@ class GeminiService {
             throw new Error(`File too small (${stats.size} bytes) on attempt ${attempt}`);
           }
 
-          // MIME sniff to ensure it's a valid MP4
-          const buffer = fs.readFileSync(destPath, { start: 0, end: 1023 });
+          // MIME sniff first 1 KB to ensure it's a valid MP4
+          const buffer = Buffer.alloc(1024);
+          const fd = fs.openSync(destPath, 'r');
+          fs.readSync(fd, buffer, 0, 1024, 0);
+          fs.closeSync(fd);
           const hasValidMP4Header = buffer.includes('ftyp') || buffer.includes('moov') || buffer.includes('mdat');
           if (!hasValidMP4Header) {
             throw new Error(`File doesn't appear to be a valid MP4 (attempt ${attempt})`);
