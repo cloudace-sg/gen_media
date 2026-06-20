@@ -3,7 +3,7 @@ import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle, Plus, St
 import { Link, useNavigate } from 'react-router-dom';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { useStore } from '../store/useStore';
-import { getBrandKit, updateBrandKit, uploadBrandLogos, generateImages, saveEditedImage, uploadImages } from '../services/api';
+import { getBrandKit, updateBrandKit, uploadBrandLogos, generateImages, saveEditedImage, uploadImages, listFiles } from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 
 const ANGLE_PROMPTS = [
@@ -72,6 +72,38 @@ const BrandAssetsPage = () => {
   const [gridPrompts, setGridPrompts] = React.useState(ANGLE_PROMPTS.slice());
   const [sheetBuilding, setSheetBuilding] = React.useState(false);
   const gridUploadRefs = React.useRef(Array(9).fill(null).map(() => React.createRef()));
+
+  // My Files picker state
+  const [pickerOpen, setPickerOpen] = React.useState(false); // false | 'hero' | number (grid idx)
+  const [pickerFiles, setPickerFiles] = React.useState([]);
+  const [pickerLoading, setPickerLoading] = React.useState(false);
+
+  const openPicker = async (target) => {
+    setPickerOpen(target);
+    setPickerLoading(true);
+    try {
+      const data = await listFiles({ type: 'image', limit: 50 });
+      setPickerFiles(data.files || data.results || []);
+    } catch (e) {
+      setPickerFiles([]);
+    } finally {
+      setPickerLoading(false);
+    }
+  };
+
+  const handlePickerSelect = async (file) => {
+    const url = file.url;
+    if (!url) return;
+    if (pickerOpen === 'hero') {
+      const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
+      setBrandAssets(kit);
+    } else if (typeof pickerOpen === 'number') {
+      const slots = [...gridSlots]; slots[pickerOpen] = url; setGridSlots(slots);
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    }
+    setPickerOpen(false);
+  };
 
   const MAX_COLORS = 6;
   const ensureColorSlots = (arr) => {
@@ -186,8 +218,8 @@ const BrandAssetsPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const results = await uploadImages([file]);
-      const url = results[0]?.url;
+      const data = await uploadImages([file]);
+      const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('Upload failed');
       const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
       setBrandAssets(kit);
@@ -225,8 +257,8 @@ const BrandAssetsPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const results = await uploadImages([file]);
-      const url = results[0]?.url;
+      const data = await uploadImages([file]);
+      const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('Upload failed');
       const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
       const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
@@ -422,6 +454,9 @@ const BrandAssetsPage = () => {
             <button onClick={() => heroUploadRef.current?.click()} className="px-3 h-9 rounded bg-dark-border text-dark-text text-sm flex items-center gap-1 hover:bg-gray-200">
               <Upload className="h-4 w-4" /> Upload
             </button>
+            <button onClick={() => openPicker('hero')} className="px-3 h-9 rounded bg-dark-border text-dark-text text-sm flex items-center gap-1 hover:bg-gray-200">
+              My Files
+            </button>
           </div>
           {heroError && <p className="text-xs text-red-400 mt-1">{heroError}</p>}
         </div>
@@ -607,6 +642,9 @@ const BrandAssetsPage = () => {
                       <button onClick={() => gridUploadRefs.current[idx]?.current?.click()} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
                         <Upload className="h-3 w-3" /> Upload
                       </button>
+                      <button onClick={() => openPicker(idx)} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
+                        My Files
+                      </button>
                     </div>
                   </div>
                 )}
@@ -615,6 +653,40 @@ const BrandAssetsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* My Files Picker Modal */}
+      {pickerOpen !== false && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setPickerOpen(false)}>
+          <div className="bg-dark-surface border border-dark-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
+              <h3 className="text-base font-semibold text-dark-text">My Files</h3>
+              <button onClick={() => setPickerOpen(false)} className="text-dark-text-secondary hover:text-dark-text text-xl leading-none">&times;</button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-4">
+              {pickerLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <Loader className="h-6 w-6 animate-spin text-accent" />
+                </div>
+              ) : pickerFiles.length === 0 ? (
+                <div className="flex items-center justify-center h-40 text-dark-text-secondary text-sm">No images found</div>
+              ) : (
+                <div className="grid grid-cols-4 gap-3">
+                  {pickerFiles.map((file, i) => (
+                    <button
+                      key={file.url || i}
+                      onClick={() => handlePickerSelect(file)}
+                      className="group relative aspect-square rounded-lg overflow-hidden border border-dark-border hover:border-accent transition-colors bg-dark-bg"
+                    >
+                      <img src={file.url || file.thumbnail} alt={file.name || ''} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
