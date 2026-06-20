@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [userRole, setUserRole] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(!!auth)
   const [emailLinkError, setEmailLinkError] = useState(null)
   const [emailLinkSent, setEmailLinkSent] = useState(false)
   const [forbiddenDomainError, setForbiddenDomainError] = useState(null)
