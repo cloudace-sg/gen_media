@@ -82,8 +82,9 @@ const BrandAssetsPage = () => {
     setPickerOpen(target);
     setPickerLoading(true);
     try {
-      const data = await listFiles({ type: 'image', limit: 50 });
-      setPickerFiles(data.files || data.results || []);
+      const data = await listFiles({ limit: 100 });
+      const all = data.items || [];
+      setPickerFiles(all.filter(f => !f.type?.includes('video') && f.url));
     } catch (e) {
       setPickerFiles([]);
     } finally {
