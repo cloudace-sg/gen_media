@@ -203,8 +203,8 @@ const BrandAssetsPage = () => {
     setHeroGenerating(true);
     setHeroError('');
     try {
-      const results = await generateImages(heroPrompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
-      const url = results[0]?.url;
+      const data = await generateImages(heroPrompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
+      const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
       const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
       setBrandAssets(kit);
@@ -241,8 +241,8 @@ const BrandAssetsPage = () => {
     if (!prompt.trim()) return;
     const next = [...gridGenerating]; next[idx] = true; setGridGenerating(next);
     try {
-      const results = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
-      const url = results[0]?.url;
+      const data = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
+      const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
       const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
       const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
