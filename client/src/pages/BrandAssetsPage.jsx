@@ -71,6 +71,7 @@ const BrandAssetsPage = () => {
   const [gridGenerating, setGridGenerating] = React.useState(Array(9).fill(false));
   const [gridPrompts, setGridPrompts] = React.useState(ANGLE_PROMPTS.slice());
   const [sheetBuilding, setSheetBuilding] = React.useState(false);
+  const [sheetPreview, setSheetPreview] = React.useState(null); // { dataUrl, savedUrl }
   const gridUploadRefs = React.useRef(Array(9).fill(null).map(() => React.createRef()));
 
   // My Files picker state
@@ -285,14 +286,20 @@ const BrandAssetsPage = () => {
       const saved = await saveEditedImage({ dataUrl, originalUrl: null, replaceOriginal: false });
       const url = saved?.url;
       if (url) {
-        stageImage({ id: `idgrid_sheet_${Date.now()}`, title: 'ID Grid Contact Sheet', url, thumbnail: url, source: 'Brand Kit' });
-        navigate('/canvas');
+        setSheetPreview({ dataUrl, savedUrl: url });
       }
     } catch (e) {
       console.error('Contact sheet failed:', e);
     } finally {
       setSheetBuilding(false);
     }
+  };
+
+  const handleStageContactSheet = () => {
+    if (!sheetPreview?.savedUrl) return;
+    stageImage({ id: `idgrid_sheet_${Date.now()}`, title: 'ID Grid Contact Sheet', url: sheetPreview.savedUrl, thumbnail: sheetPreview.savedUrl, source: 'Brand Kit' });
+    setSheetPreview(null);
+    navigate('/canvas');
   };
 
   const handleUploadLogos = async (e) => {
@@ -604,7 +611,7 @@ const BrandAssetsPage = () => {
               Make Contact Sheet → Stage for Veo
             </button>
           </div>
-          <p className="text-xs text-dark-text-secondary mb-4">4–9 product shots from different angles. Generate or upload each slot, then stitch into a contact sheet reference.</p>
+          <p className="text-xs text-dark-text-secondary mb-4">The same product photographed from 4–9 different angles. Each slot = one angle (front, side, top-down, etc.). Generate or upload each, then stitch into a contact sheet Veo can use as reference.</p>
 
           <div className="grid grid-cols-3 gap-3">
             {gridSlots.map((url, idx) => (
@@ -684,6 +691,27 @@ const BrandAssetsPage = () => {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Sheet Preview Modal */}
+      {sheetPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setSheetPreview(null)}>
+          <div className="bg-dark-surface border border-dark-border rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
+              <h3 className="text-base font-semibold text-dark-text">Contact Sheet Preview</h3>
+              <button onClick={() => setSheetPreview(null)} className="text-dark-text-secondary hover:text-dark-text text-xl leading-none">&times;</button>
+            </div>
+            <div className="p-4">
+              <img src={sheetPreview.dataUrl} alt="Contact sheet" className="w-full rounded-lg border border-dark-border" />
+            </div>
+            <div className="flex justify-end gap-3 px-5 py-4 border-t border-dark-border">
+              <button onClick={() => setSheetPreview(null)} className="px-4 h-9 rounded bg-dark-border text-dark-text text-sm hover:bg-gray-200">Cancel</button>
+              <button onClick={handleStageContactSheet} className="px-4 h-9 rounded bg-accent text-black text-sm font-medium flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Stage for Veo
+              </button>
             </div>
           </div>
         </div>
