@@ -270,7 +270,7 @@ const BrandAssetsPage = () => {
     if (!prompt.trim()) return;
     const next = [...gridGenerating]; next[idx] = true; setGridGenerating(next);
     try {
-      const refs = gridMasterImage ? [gridMasterImage] : [];
+      const refs = gridMasterImage ? [{ url: gridMasterImage }] : [];
       const data = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', undefined, refs);
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
@@ -290,7 +290,7 @@ const BrandAssetsPage = () => {
     try {
       const emptySlots = Array(9).fill(null);
       const tasks = gridPrompts.map((prompt, idx) =>
-        generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', undefined, [gridMasterImage])
+        generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', undefined, [{ url: gridMasterImage }])
           .then(data => ({ idx, url: (data.results || data)[0]?.url }))
           .catch(() => ({ idx, url: null }))
       );
