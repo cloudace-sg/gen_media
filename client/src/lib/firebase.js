@@ -11,20 +11,9 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
 }
 
-// Avoid logging secrets in production builds
-if (process.env.NODE_ENV !== 'production') {
-  console.log("Environment variables check:", {
-    REACT_APP_FIREBASE_API_KEY: process.env.REACT_APP_FIREBASE_API_KEY,
-    REACT_APP_FIREBASE_AUTH_DOMAIN: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-    REACT_APP_FIREBASE_PROJECT_ID: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    REACT_APP_FIREBASE_STORAGE_BUCKET: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-    REACT_APP_FIREBASE_MESSAGING_SENDER_ID: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    REACT_APP_FIREBASE_APP_ID: process.env.REACT_APP_FIREBASE_APP_ID,
-  })
-  console.log("Firebase config object:", firebaseConfig)
-}
-
 // Create a function to initialize Firebase
+let firebaseInitError = null
+
 function initializeFirebase() {
   // Check if we're in a browser environment
   if (typeof window === "undefined") {
@@ -32,33 +21,30 @@ function initializeFirebase() {
   }
 
   try {
-    // Initialize Firebase — reuse existing app if already initialized (prevents duplicate-app error)
+    // Reuse existing app if already initialized (prevents duplicate-app error)
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
 
-    // Initialize Auth
     const auth = getAuth(app)
 
-    // Configure auth for email link sign-in
     if (auth) {
       auth.useDeviceLanguage()
-
-      // Log configuration for debugging
-      console.log("Firebase initialized with config:", {
-        apiKey: firebaseConfig.apiKey ? "Set" : "Not set",
-        authDomain: firebaseConfig.authDomain ? "Set" : "Not set",
-        projectId: firebaseConfig.projectId ? "Set" : "Not set",
-      })
     }
 
-    // Initialize Google Provider
     const googleProvider = new GoogleAuthProvider()
-    googleProvider.setCustomParameters({
-      prompt: "select_account",
+    googleProvider.setCustomParameters({ prompt: "select_account" })
+
+    console.log("Firebase initialized:", {
+      apiKey: firebaseConfig.apiKey ? "Set" : "MISSING",
+      authDomain: firebaseConfig.authDomain ? "Set" : "MISSING",
+      projectId: firebaseConfig.projectId ? "Set" : "MISSING",
+      appId: firebaseConfig.appId ? "Set" : "MISSING",
+      appsCount: getApps().length,
     })
 
     return { app, auth, googleProvider }
   } catch (error) {
-    console.error("Firebase initialization error:", error)
+    firebaseInitError = error
+    console.error("Firebase initialization error:", error.code || error.message, error)
     return { app: null, auth: null, googleProvider: null }
   }
 }
@@ -66,8 +52,4 @@ function initializeFirebase() {
 // Initialize Firebase and export the instances
 const { app, auth, googleProvider } = initializeFirebase()
 
-if (auth) {
-  auth.useDeviceLanguage()
-}
-
-export { app, auth, googleProvider }
+export { app, auth, googleProvider, firebaseInitError }

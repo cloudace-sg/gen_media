@@ -9,7 +9,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from "firebase/auth"
-import { auth, googleProvider } from "../lib/firebase"
+import { auth, googleProvider, firebaseInitError } from "../lib/firebase"
 import { checkUserExists } from "../services/api"
 import { postSignIn } from "../services/api"
 
@@ -321,8 +321,10 @@ export const AuthProvider = ({ children }) => {
 
   const signInWithEmail = async (email) => {
     if (!isInitialized || !auth) {
-      console.error("Firebase auth is not initialized")
-      setEmailLinkError("Authentication is not ready. Please refresh the page and try again.")
+      const initErr = firebaseInitError
+      const errDetail = initErr ? ` [${initErr.code || initErr.message}]` : ' [auth=null, no init error captured]'
+      console.error("Firebase auth is not initialized", { isInitialized, auth, firebaseInitError })
+      setEmailLinkError(`Authentication failed to initialize${errDetail}. Please refresh and try again.`)
       return
     }
 
