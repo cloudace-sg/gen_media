@@ -102,6 +102,16 @@ export const generateImages = async (prompt, purpose, imageCount = 1, aspectRati
   }
 };
 
+export const searchProductReferences = async (imageUrl) => {
+  try {
+    const response = await api.post('/search/product-references', { imageUrl });
+    return response.data; // { query, references: [{url}] }
+  } catch (error) {
+    console.warn('Product reference search failed (non-fatal):', error.message);
+    return { query: null, references: [] };
+  }
+};
+
 // Remix API
 export const remixImages = async (prompt, images, purpose, aspectRatio = '16:9', imageCount = 1, styleId) => {
   try {

@@ -3,7 +3,7 @@ import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle, Plus, St
 import { Link, useNavigate } from 'react-router-dom';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { useStore } from '../store/useStore';
-import { getBrandKit, updateBrandKit, uploadBrandLogos, generateImages, saveEditedImage, uploadImages, listFiles } from '../services/api';
+import { getBrandKit, updateBrandKit, uploadBrandLogos, generateImages, saveEditedImage, uploadImages, listFiles, searchProductReferences } from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 
 const ANGLE_PROMPTS = [
@@ -72,6 +72,8 @@ const BrandAssetsPage = () => {
   const [gridAllGenerating, setGridAllGenerating] = React.useState(false);
   const [gridPrompts, setGridPrompts] = React.useState(ANGLE_PROMPTS.slice());
   const [gridMasterImage, setGridMasterImage] = React.useState(null);
+  const [gridWebRefs, setGridWebRefs] = React.useState([]); // cached web references for current master
+  const [gridSearchQuery, setGridSearchQuery] = React.useState(null);
   const [sheetBuilding, setSheetBuilding] = React.useState(false);
   const [sheetPreview, setSheetPreview] = React.useState(null); // { dataUrl, savedUrl }
   const gridUploadRefs = React.useRef(Array(9).fill(null).map(() => React.createRef()));
@@ -253,6 +255,8 @@ const BrandAssetsPage = () => {
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('Upload failed');
       setGridMasterImage(url);
+      setGridWebRefs([]);
+      setGridSearchQuery(null);
       await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: url });
     } catch (e) {
       console.error('Grid master upload failed:', e);
@@ -262,7 +266,18 @@ const BrandAssetsPage = () => {
 
   const handleRemoveGridMaster = async () => {
     setGridMasterImage(null);
+    setGridWebRefs([]);
+    setGridSearchQuery(null);
     await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: null });
+  };
+
+  const fetchWebRefs = async () => {
+    if (!gridMasterImage) return [];
+    if (gridWebRefs.length > 0) return gridWebRefs; // cached
+    const { query, references } = await searchProductReferences(gridMasterImage);
+    if (query) setGridSearchQuery(query);
+    setGridWebRefs(references || []);
+    return references || [];
   };
 
   const handleGenerateGridSlot = async (idx) => {
@@ -270,7 +285,8 @@ const BrandAssetsPage = () => {
     if (!prompt.trim()) return;
     const next = [...gridGenerating]; next[idx] = true; setGridGenerating(next);
     try {
-      const refs = gridMasterImage ? [{ url: gridMasterImage }] : [];
+      const webRefs = await fetchWebRefs();
+      const refs = gridMasterImage ? [{ url: gridMasterImage }, ...webRefs] : [];
       const data = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs);
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
@@ -288,9 +304,11 @@ const BrandAssetsPage = () => {
     if (!gridMasterImage) return;
     setGridAllGenerating(true);
     try {
-      const emptySlots = Array(9).fill(null);
+      // Fetch web references once, reuse across all 9 generations
+      const webRefs = await fetchWebRefs();
+      const refs = [{ url: gridMasterImage }, ...webRefs];
       const tasks = gridPrompts.map((prompt, idx) =>
-        generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', 'product_id', [{ url: gridMasterImage }])
+        generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs)
           .then(data => ({ idx, url: (data.results || data)[0]?.url }))
           .catch(() => ({ idx, url: null }))
       );
@@ -683,7 +701,9 @@ const BrandAssetsPage = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-dark-text mb-1">Master Product Image</p>
-              <p className="text-xs text-dark-text-secondary mb-2">This photo is used as reference for all 9 angle generations.</p>
+              <p className="text-xs text-dark-text-secondary mb-2">
+                {gridSearchQuery ? <>Identified: <span className="text-accent">{gridSearchQuery}</span> — web references loaded</> : 'This photo is used as reference for all 9 angle generations.'}
+              </p>
               <div className="flex gap-2">
                 <input ref={gridMasterUploadRef} type="file" accept="image/*" className="hidden" onChange={handleUploadGridMaster} />
                 <button onClick={() => gridMasterUploadRef.current?.click()} className="px-2 h-6 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-1">

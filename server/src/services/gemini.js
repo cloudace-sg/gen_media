@@ -1029,6 +1029,23 @@ class GeminiService {
     }
   }
 
+  async identifyProductFromImage(imageUrl) {
+    const imageDataParts = await this.prepareImagesForRemix([{ url: imageUrl }]);
+    const { candidates } = await this.genAI.models.generateContent({
+      model: MODELS.text,
+      contents: [{
+        role: 'user',
+        parts: [
+          ...imageDataParts,
+          { text: 'Identify this product. Return a concise Google Images search query (max 8 words) to find product photography of this exact item — include brand name and product name. Return ONLY the search query, nothing else. Example: "Red Bull Energy Drink 250ml can" or "Dove Original Beauty Bar soap".' }
+        ]
+      }],
+      generationConfig: { temperature: 0, maxOutputTokens: 64, thinkingConfig: { thinkingBudget: 0 } }
+    });
+    const text = candidates?.[0]?.content?.parts?.find(p => p.text)?.text?.trim();
+    return text || null;
+  }
+
   /**
    * Enhance user prompt using Gemini 2.5 Flash to create high-precision, marketing-oriented JSON prompt
    * @param {string} userPrompt - Original user prompt
