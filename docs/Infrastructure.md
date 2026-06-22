@@ -120,6 +120,7 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-21** `2e389b1`: pushed to GitHub
 - **2026-06-21** `fe6bdf5`: Cloud Build → Cloud Run ✅ SUCCESS (build bc98bd80) — contact sheet preview modal
 - **2026-06-21** `9d392f5`: Cloud Build → Cloud Run ✅ SUCCESS (build 1a3d5256) — generateImages response unwrap fix
 - **2026-06-21** `07ae1f0`: Cloud Build → Cloud Run ✅ SUCCESS (build 8c7f1c45) — My Files picker API fix

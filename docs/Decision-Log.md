@@ -95,6 +95,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-21 | `07ae1f0` | fix | My Files picker now loads from /api/files correctly |
 | 2026-06-21 | `9d392f5` | fix | unwrap generateImages response correctly in Brand Assets |
 | 2026-06-21 | `fe6bdf5` | fix | contact sheet shows preview modal before staging, not auto-navigate |
+| 2026-06-21 | `2e389b1` | docs | sync Obsidian vault — Jun 21 session (Brand Assets fixes + auth race) |
 
 ---
 

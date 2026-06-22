@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app"
+import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, GoogleAuthProvider } from "firebase/auth"
 
 // Your web app's Firebase configuration
@@ -32,8 +32,8 @@ function initializeFirebase() {
   }
 
   try {
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig)
+    // Initialize Firebase — reuse existing app if already initialized (prevents duplicate-app error)
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
 
     // Initialize Auth
     const auth = getAuth(app)

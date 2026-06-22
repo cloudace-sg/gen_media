@@ -185,8 +185,8 @@ class GeminiService {
       contents: [{ role: 'user', parts }],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 8192,
-        thinkingConfig: { thinkingBudget: -1 }
+        maxOutputTokens: 1024,
+        thinkingConfig: { thinkingBudget: 0 }
       }
     });
 
