@@ -947,10 +947,12 @@ class GeminiService {
       
       const systemInstruction = this.buildSystemPrompt({ basePrompt: '', styleId });
       
-      // For non-text-heavy styles, add explicit negative instruction
       let finalPrompt = prompt;
-      if (styleId !== 'bold_graphic_ad') {
-        // More aggressive text suppression for product advertisements
+      if (styleId === 'product_id') {
+        // ID Grid angle generation: preserve product branding exactly
+        finalPrompt = `${prompt}\n\nCRITICAL: This is a product identity shot. Reproduce the exact same product from the reference image — same brand logo, same label text, same colours, same packaging design — photographed from the specified angle. Do NOT blank out, alter, or remove any text, logos, or labels on the product.`;
+      } else if (styleId !== 'bold_graphic_ad') {
+        // Ad generation: suppress embedded text so designers can overlay their own copy
         finalPrompt = `${prompt}\n\nCRITICAL: Do not add any text, labels, brand names, or letters anywhere in the image. Keep all product labels completely blank. Use solid colors or abstract shapes instead of any text. This is a visual-only advertisement without any embedded text.`;
       }
 
