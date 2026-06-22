@@ -69,10 +69,13 @@ const BrandAssetsPage = () => {
   // ID Grid state
   const [gridSlots, setGridSlots] = React.useState(Array(9).fill(null));
   const [gridGenerating, setGridGenerating] = React.useState(Array(9).fill(false));
+  const [gridAllGenerating, setGridAllGenerating] = React.useState(false);
   const [gridPrompts, setGridPrompts] = React.useState(ANGLE_PROMPTS.slice());
+  const [gridMasterImage, setGridMasterImage] = React.useState(null);
   const [sheetBuilding, setSheetBuilding] = React.useState(false);
   const [sheetPreview, setSheetPreview] = React.useState(null); // { dataUrl, savedUrl }
   const gridUploadRefs = React.useRef(Array(9).fill(null).map(() => React.createRef()));
+  const gridMasterUploadRef = React.useRef(null);
 
   // My Files picker state
   const [pickerOpen, setPickerOpen] = React.useState(false); // false | 'hero' | number (grid idx)
@@ -99,9 +102,13 @@ const BrandAssetsPage = () => {
     if (pickerOpen === 'hero') {
       const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
       setBrandAssets(kit);
+    } else if (pickerOpen === 'gridMaster') {
+      setGridMasterImage(url);
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: url });
+      setBrandAssets(kit);
     } else if (typeof pickerOpen === 'number') {
       const slots = [...gridSlots]; slots[pickerOpen] = url; setGridSlots(slots);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
       setBrandAssets(kit);
     }
     setPickerOpen(false);
@@ -126,6 +133,7 @@ const BrandAssetsPage = () => {
           kit.idGrid.forEach((url, i) => { slots[i] = url; });
           setGridSlots(slots);
         }
+        if (kit.idGridMaster) setGridMasterImage(kit.idGridMaster);
       } catch (e) {
         console.error('Failed to load brand kit:', e);
       }
@@ -237,21 +245,63 @@ const BrandAssetsPage = () => {
   };
 
   // ── ID Grid handlers ─────────────────────────────────────────────────────
+  const handleUploadGridMaster = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const data = await uploadImages([file]);
+      const url = (data.results || data)[0]?.url;
+      if (!url) throw new Error('Upload failed');
+      setGridMasterImage(url);
+      await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: url });
+    } catch (e) {
+      console.error('Grid master upload failed:', e);
+    }
+    if (gridMasterUploadRef.current) gridMasterUploadRef.current.value = '';
+  };
+
+  const handleRemoveGridMaster = async () => {
+    setGridMasterImage(null);
+    await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: null });
+  };
+
   const handleGenerateGridSlot = async (idx) => {
     const prompt = gridPrompts[idx];
     if (!prompt.trim()) return;
     const next = [...gridGenerating]; next[idx] = true; setGridGenerating(next);
     try {
-      const data = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
+      const refs = gridMasterImage ? [gridMasterImage] : [];
+      const data = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', undefined, refs);
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
       const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
       setBrandAssets(kit);
     } catch (e) {
       console.error('Grid slot generation failed:', e);
     } finally {
       const n = [...gridGenerating]; n[idx] = false; setGridGenerating(n);
+    }
+  };
+
+  const handleGenerateAllAngles = async () => {
+    if (!gridMasterImage) return;
+    setGridAllGenerating(true);
+    try {
+      const emptySlots = Array(9).fill(null);
+      const tasks = gridPrompts.map((prompt, idx) =>
+        generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', undefined, [gridMasterImage])
+          .then(data => ({ idx, url: (data.results || data)[0]?.url }))
+          .catch(() => ({ idx, url: null }))
+      );
+      const results = await Promise.all(tasks);
+      const newSlots = [...gridSlots];
+      results.forEach(({ idx, url }) => { if (url) newSlots[idx] = url; });
+      setGridSlots(newSlots);
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: newSlots.filter(Boolean), idGridMaster: gridMasterImage });
+      setBrandAssets(kit);
+    } finally {
+      setGridAllGenerating(false);
     }
   };
 
@@ -263,7 +313,7 @@ const BrandAssetsPage = () => {
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('Upload failed');
       const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
       setBrandAssets(kit);
     } catch (e) {
       console.error('Grid slot upload failed:', e);
@@ -273,7 +323,7 @@ const BrandAssetsPage = () => {
 
   const handleRemoveGridSlot = async (idx) => {
     const slots = [...gridSlots]; slots[idx] = null; setGridSlots(slots);
-    const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean) });
+    const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
     setBrandAssets(kit);
   };
 
@@ -611,7 +661,49 @@ const BrandAssetsPage = () => {
               Make Contact Sheet → Stage for Veo
             </button>
           </div>
-          <p className="text-xs text-dark-text-secondary mb-4">The same product photographed from 4–9 different angles. Each slot = one angle (front, side, top-down, etc.). Generate or upload each, then stitch into a contact sheet Veo can use as reference.</p>
+          <p className="text-xs text-dark-text-secondary mb-4">Upload your product photo as the master reference, then generate all 9 angle variations automatically — or fill each slot individually.</p>
+
+          {/* Master product image + Generate All */}
+          <div className="flex items-center gap-3 mb-4 p-3 bg-dark-bg border border-dark-border rounded-lg">
+            <div className="flex-shrink-0">
+              {gridMasterImage ? (
+                <div className="relative group w-16 h-16 rounded overflow-hidden border border-dark-border">
+                  <img src={gridMasterImage} alt="Master" className="w-full h-full object-cover" />
+                  <button
+                    onClick={handleRemoveGridMaster}
+                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                    title="Remove master image"
+                  ><Trash2 className="h-4 w-4 text-white" /></button>
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded border-2 border-dashed border-dark-border flex items-center justify-center bg-dark-surface">
+                  <ImageIcon className="h-6 w-6 text-dark-text-secondary" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-dark-text mb-1">Master Product Image</p>
+              <p className="text-xs text-dark-text-secondary mb-2">This photo is used as reference for all 9 angle generations.</p>
+              <div className="flex gap-2">
+                <input ref={gridMasterUploadRef} type="file" accept="image/*" className="hidden" onChange={handleUploadGridMaster} />
+                <button onClick={() => gridMasterUploadRef.current?.click()} className="px-2 h-6 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-1">
+                  <Upload className="h-3 w-3" /> Upload
+                </button>
+                <button onClick={() => openPicker('gridMaster')} className="px-2 h-6 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-1">
+                  My Files
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={handleGenerateAllAngles}
+              disabled={!gridMasterImage || gridAllGenerating}
+              className="flex-shrink-0 px-3 h-9 rounded bg-accent text-black text-sm font-medium flex items-center gap-2 disabled:opacity-50 hover:bg-accent/80"
+              title={!gridMasterImage ? 'Upload a master image first' : 'Generate all 9 angles from master image'}
+            >
+              {gridAllGenerating ? <Loader className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              Generate All 9 Angles
+            </button>
+          </div>
 
           <div className="grid grid-cols-3 gap-3">
             {gridSlots.map((url, idx) => (

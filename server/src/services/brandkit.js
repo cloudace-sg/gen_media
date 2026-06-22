@@ -81,6 +81,7 @@ function getBrandKit() {
     const kit = JSON.parse(raw);
     if (!('heroImage' in kit)) kit.heroImage = null;
     if (!('idGrid' in kit)) kit.idGrid = [];
+    if (!('idGridMaster' in kit)) kit.idGridMaster = null;
     return kit;
   } catch (_) {}
   // If local read failed or empty, do a best-effort synchronous fallback to empty,
@@ -92,7 +93,7 @@ function getBrandKit() {
       try { fs.writeFileSync(BRANDKIT_FILE, JSON.stringify(fromGcs, null, 2)); } catch (_) {}
     }
   })().catch(()=>{});
-  return { logos: [], colors: [], fonts: [], font: null, heroImage: null, idGrid: [] };
+  return { logos: [], colors: [], fonts: [], font: null, heroImage: null, idGrid: [], idGridMaster: null };
 }
 
 function setBrandKit(update) {
@@ -105,6 +106,7 @@ function setBrandKit(update) {
     font: typeof update.font === 'string' ? update.font : current.font,
     heroImage: 'heroImage' in update ? (update.heroImage || null) : current.heroImage,
     idGrid: Array.isArray(update.idGrid) ? update.idGrid.slice(0, 9) : current.idGrid,
+    idGridMaster: 'idGridMaster' in update ? (update.idGridMaster || null) : current.idGridMaster,
   };
   // Write-through local cache
   fs.writeFileSync(BRANDKIT_FILE, JSON.stringify(next, null, 2));
