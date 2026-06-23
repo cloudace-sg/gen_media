@@ -120,6 +120,19 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-23** `f7fccd0`: docs — Gemini API token notes
+- **2026-06-23** `87f17d4`: docs — side questions Jun 22-23
+- **2026-06-23** `71fc37a`: docs — side questions Jun 20-21
+- **2026-06-23** `767b039`: docs — Gemini search grounding sync
+- **2026-06-23** `d9d3acc`: Cloud Build → Cloud Run ✅ SUCCESS — Gemini Google Search grounding replaces Custom Search API
+- **2026-06-23** `baed06a`: docs — session Jun 22/23 Obsidian sync
+- **2026-06-22** `5260922`: Cloud Build → Cloud Run ✅ SUCCESS — product_id styleId preserves branding/labels in ID Grid
+- **2026-06-22** `b88c92e`: Cloud Build → Cloud Run ✅ SUCCESS — Node 18→20 fix (browserslist 4.24+ regex compat)
+- **2026-06-22** `5136dbb`: Cloud Build → Cloud Run ❌ FAILURE (browserslist Node 18 compat) → superseded by b88c92e
+- **2026-06-22** `16aa262`: Cloud Build → Cloud Run ✅ SUCCESS — ID Grid master image + Generate All 9 Angles
+- **2026-06-22** `9717a5c`: Cloud Build → Cloud Run ✅ SUCCESS — Firebase config via .env.production (auth fix)
+- **2026-06-22** `4db18d1`: Cloud Build → Cloud Run ✅ SUCCESS — surface Firebase init error in UI
+- **2026-06-22** `eebcc5b`: Cloud Build → Cloud Run ✅ SUCCESS — Firebase duplicate-app guard + Gemini thinking token cap
 - **2026-06-21** `2e389b1`: pushed to GitHub
 - **2026-06-21** `fe6bdf5`: Cloud Build → Cloud Run ✅ SUCCESS (build bc98bd80) — contact sheet preview modal
 - **2026-06-21** `9d392f5`: Cloud Build → Cloud Run ✅ SUCCESS (build 1a3d5256) — generateImages response unwrap fix

@@ -104,9 +104,13 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-22 | `b88c92e` | fix | upgrade build stage to Node 20 (browserslist 4.24+ regex compat) |
 | 2026-06-22 | `5260922` | fix | preserve product branding/labels in ID Grid angle generation |
 | 2026-06-22 | `05d15a8` | feat | web reference search before ID Grid angle generation |
-| 2026-06-23 | `05d15a8` | feat | (continued push) web reference search + Obsidian sync |
 | 2026-06-23 | `baed06a` | docs | sync Obsidian vault — Jun 22/23 session (auth fix, ID Grid overhaul, web search) |
 | 2026-06-23 | `d9d3acc` | feat | replace Custom Search API with Gemini Google Search grounding |
+| 2026-06-23 | `767b039` | docs | sync Obsidian — Gemini search grounding decision + Custom Search deprecation |
+| 2026-06-23 | `71fc37a` | docs | add side questions & feedback log from Jun 20–21 sessions |
+| 2026-06-23 | `87f17d4` | docs | add side questions from Jun 22-23 to session doc |
+| 2026-06-23 | `f7fccd0` | docs | add Gemini API token notes — OAuth AQ. vs AIza key distinction |
+| 2026-06-23 | _(this commit)_ | docs | session-end Obsidian sync — infra deployments, /btw discussions captured |
 
 ---
 
