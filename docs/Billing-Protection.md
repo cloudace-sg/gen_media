@@ -16,7 +16,30 @@ Prevents Gemini API token hacking and cost spikes. Zero extra cost (no SCC). Pro
 | `functions/billingCircuitBreaker/index.js` | Cloud Function — disables Gemini key at 100% budget |
 | `scripts/test-billing-protection.sh` | Fake payload tests for all 3 layers |
 
-## How it works
+## How Each Layer Works
+
+### Layer 1 — API Key Restriction *(manual step — Cloud Console)*
+The Gemini API key is just a string — if someone steals it, they can use it from anywhere. Restricting it to your Cloud Run URL means even if the key leaks, it only works when called from your app. Restricting it to Generative Language API means it can't be used for any other Google service.
+
+### Layer 2 — spendLimit.js middleware *(live on Cloud Run)*
+Every time a logged-in user calls `/api/generate`, `/api/remix`, `/api/video`, or `/api/prompt`, the server increments a counter in Firestore for that user. Once they hit 50 calls in a day, they get a `429` error and are blocked until tomorrow. This stops one compromised account from hammering Gemini all day. Admins are exempt.
+
+### Layer 3 — Billing Budget alerts *(active — all 4 billing admins notified)*
+Google watches your total spend on the project. When it crosses 70%, 90%, 100%, or 120% of your USD 100 budget, it sends an email to all billing admins and fires a message into the `billing-alerts` Pub/Sub topic. The email is for humans to act on; the Pub/Sub message triggers Layer 4 automatically.
+
+### Layer 4 — Circuit Breaker Cloud Function *(deployed)*
+Listens to the `billing-alerts` Pub/Sub topic. When a 100% budget message arrives, it automatically calls the Google API and disables your Gemini API key. All Gemini calls immediately start failing with `403`. Critically — only Gemini stops. Cloud Run, Firebase, GCS, and your website all stay up. Re-enable the key manually in Cloud Console once you've investigated.
+
+### How the layers work together
+
+```
+Normal user                        → Layer 2 blocks after 50 calls/day
+Compromised account hammering      → Layer 2 blocks, Layer 3 alerts at 70%
+Stolen API key used externally     → Layer 1 blocks it entirely
+Mass attack that bypasses Layer 2  → Layer 3 alerts → Layer 4 auto-kills key at 100%
+```
+
+## Architecture Overview
 
 ```
 User request
@@ -26,10 +49,10 @@ User request
 
 In parallel:
   Billing Budget → Pub/Sub → Cloud Function
-    70%  → email alert only
-    90%  → email alert only (manual: set Firestore throttle flag)
+    70%  → email to all billing admins (alert only)
+    90%  → email to all billing admins (alert only)
     100% → Cloud Function disables Gemini API key (app stays up, Gemini 403s)
-    120% → email alert (key already disabled)
+    120% → email to all billing admins (key already disabled)
 
 Cloud Monitoring → alert if request spike > 200 in 5 min
 ```
