@@ -41,20 +41,19 @@ ID Grid generated from text-only angle prompts with no product anchor. Contact s
 - Skips the ad text-suppression prompt ("keep labels blank")
 - Adds preservation instruction: reproduce exact brand logo, label text, colours, packaging from reference
 
-**Web Reference Search** (`POST /api/search/product-references`):
-- Step 1: Gemini identifies product from master image → search query (e.g., "Dove Original Beauty Bar soap")
-- Step 2: Google Custom Search API returns up to 5 real product photos
-- Step 3: Web refs + master image passed as `referenceImages` to each generation
-- Results cached per master image; reused across all 9 slots and per-slot generates
-- Graceful fallback: if `GOOGLE_SEARCH_API_KEY`/`GOOGLE_SEARCH_ENGINE_ID` not set, generates from master only
+**Web Research via Gemini Google Search Grounding** (`POST /api/search/product-references`):
+- Gemini text model with `tools: [{googleSearch: {}}]` researches the product from the web
+- Returns a visual brief (~80 words): brand name, colours, packaging shape, label design
+- Brief is prepended to each angle prompt: `"${context}\n\nShot angle: ${anglePrompt}"`
+- Result cached per master image session — one search call, reused across all 9 generations
+- No external API keys required — uses the existing `GOOGLE_GEMINI_API_KEY`
+- Graceful fallback: if research fails, generates from master image + bare angle prompt
 
-### Setup Required (Cloud Run env vars)
-```
-GOOGLE_SEARCH_API_KEY=<Google API key with Custom Search API enabled>
-GOOGLE_SEARCH_ENGINE_ID=<Custom Search Engine ID from cse.google.com>
-```
-
-See [[Infrastructure]] for how to add env vars to Cloud Run.
+**Why Google Custom Search was dropped:**
+- Google deprecated the "Search the entire web" Custom Search option
+- CSE required two extra env vars (`GOOGLE_SEARCH_API_KEY`, `GOOGLE_SEARCH_ENGINE_ID`) and a CSE setup
+- Gemini's native `googleSearch` tool achieves the same goal with zero additional setup
+- Added benefit: Gemini synthesises the web results into a structured visual brief rather than returning raw image URLs that still need to be downloaded and passed as binary data
 
 ### Bug Fixed: `referenceImages` format
 Server's `prepareImagesForRemix` expects `[{ url: "..." }]` objects. Original code passed plain strings `["https://..."]` — `img.url` was undefined, axios fetched `""`, all remix calls failed silently.
@@ -73,7 +72,7 @@ Server's `prepareImagesForRemix` expects `[{ url: "..." }]` objects. Original co
 | `cloudbuild.yaml` | Removed dead `--build-arg` lines |
 | `client/src/lib/firebase.js` | `getApps()` guard; `firebaseInitError` export |
 | `client/src/contexts/auth-context.js` | Surface real init error in UI |
-| `server/src/services/gemini.js` | `thinkingBudget: 0`; `product_id` styleId; `identifyProductFromImage` method |
+| `server/src/services/gemini.js` | `thinkingBudget: 0`; `product_id` styleId; `researchProductWithSearch` (Gemini+Search grounding) |
 | `server/src/services/brandkit.js` | `idGridMaster` field added |
 | `server/src/routes/search.js` | `POST /api/search/product-references` endpoint |
 | `client/src/services/api.js` | `searchProductReferences()` export |

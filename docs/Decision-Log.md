@@ -105,6 +105,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-22 | `5260922` | fix | preserve product branding/labels in ID Grid angle generation |
 | 2026-06-22 | `05d15a8` | feat | web reference search before ID Grid angle generation |
 | 2026-06-23 | `05d15a8` | feat | (continued push) web reference search + Obsidian sync |
+| 2026-06-23 | `baed06a` | docs | sync Obsidian vault — Jun 22/23 session (auth fix, ID Grid overhaul, web search) |
+| 2026-06-23 | `d9d3acc` | feat | replace Custom Search API with Gemini Google Search grounding |
 
 ---
 
