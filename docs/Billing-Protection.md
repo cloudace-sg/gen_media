@@ -18,8 +18,19 @@ Prevents Gemini API token hacking and cost spikes. Zero extra cost (no SCC). Pro
 
 ## How Each Layer Works
 
-### Layer 1 — API Key Restriction *(manual step — Cloud Console)*
-The Gemini API key is just a string — if someone steals it, they can use it from anywhere. Restricting it to your Cloud Run URL means even if the key leaks, it only works when called from your app. Restricting it to Generative Language API means it can't be used for any other Google service.
+### Layer 1 — Workload Identity (no API key) *(implemented in gemini.js)*
+Instead of an API key, the Cloud Run service uses its own Google identity (service account) to call Gemini. There is no key string to steal. Access is tied to the Cloud Run service — unusable from outside GCP.
+
+**How it works in code:** `GeminiService` now has `genAIPrimary = genAIVertex (Workload Identity)` when `GCP_PROJECT_ID` is set. Falls back to `genAI (API key)` for local dev. `GOOGLE_GEMINI_API_KEY` is now optional when `GCP_PROJECT_ID` is configured.
+
+**To fully remove the API key** (after verifying Workload Identity works):
+```bash
+gcloud run services update gen-media-demo \
+  --region asia-southeast1 \
+  --remove-env-vars GOOGLE_GEMINI_API_KEY
+```
+
+**Note:** API key still present as fallback during transition. API restriction to Generative Language API was already applied in Cloud Console.
 
 ### Layer 2 — spendLimit.js middleware *(live on Cloud Run)*
 Every time a logged-in user calls `/api/generate`, `/api/remix`, `/api/video`, or `/api/prompt`, the server increments a counter in Firestore for that user. Once they hit 50 calls in a day, they get a `429` error and are blocked until tomorrow. This stops one compromised account from hammering Gemini all day. Admins are exempt.
@@ -265,24 +276,90 @@ After the test, re-enable the test key in Cloud Console or delete it.
 
 ## Part 3 — Reuse on a New Project
 
-Copy these 4 files into the new project:
+### Files to copy (5 files)
 
 ```
 scripts/setup-billing-protection.sh
 scripts/test-billing-protection.sh
 server/src/middleware/spendLimit.js
 functions/billingCircuitBreaker/          ← whole folder
+server/src/services/gemini.js             ← Workload Identity logic already inside
 ```
 
-Then follow Part 1 exactly, substituting the new project's `PROJECT_ID`, `BILLING_ACCOUNT_ID`, and Cloud Run service name.
+### Step-by-step for a new project
 
-The only project-specific values are:
-- `PROJECT_ID` — passed as script argument
-- `BILLING_ACCOUNT_ID` — passed as script argument
-- `GOOGLE_GEMINI_KEY_NAME` — set as Cloud Run env var (Step 5)
-- `GEMINI_DAILY_LIMIT_PER_USER` — set as Cloud Run env var (default: 50)
+**Step 1 — Copy the files above into the new project**
 
-Everything else (Pub/Sub topic name, function name, Firestore paths) uses the same defaults and can be left as-is.
+**Step 2 — Wire spendLimit into the new project's Express server**
+```js
+const { authenticate } = require('./middleware/auth');
+const { spendLimit } = require('./middleware/spendLimit');
+
+app.use('/api/generate', authenticate, spendLimit, generateRoutes);
+app.use('/api/remix',    authenticate, spendLimit, remixRoutes);
+app.use('/api/video',    authenticate, spendLimit, videoRoutes);
+app.use('/api/prompt',   authenticate, spendLimit, require('./routes/prompt'));
+```
+
+**Step 3 — Run the setup script**
+```bash
+./scripts/setup-billing-protection.sh \
+  <NEW_PROJECT_ID> \
+  <BILLING_ACCOUNT_ID> \
+  <ALERT_EMAIL> \
+  <MONTHLY_BUDGET_USD>
+```
+
+**Step 4 — Grant Cloud Run service account permission to call Gemini**
+```bash
+# Get the Cloud Run service account
+gcloud run services describe <SERVICE_NAME> \
+  --region asia-southeast1 \
+  --project <NEW_PROJECT_ID> \
+  --format="value(spec.template.spec.serviceAccountName)"
+
+# Grant Vertex AI access (enables Workload Identity for Gemini)
+gcloud projects add-iam-policy-binding <NEW_PROJECT_ID> \
+  --member="serviceAccount:<SERVICE_ACCOUNT_EMAIL>" \
+  --role="roles/aiplatform.user"
+```
+
+**Step 5 — Set Cloud Run env vars**
+```bash
+gcloud run services update <SERVICE_NAME> \
+  --region asia-southeast1 \
+  --update-env-vars \
+    GEMINI_DAILY_LIMIT_PER_USER=50,\
+    GCP_PROJECT_ID=<NEW_PROJECT_ID>,\
+    GOOGLE_GEMINI_KEY_NAME=projects/<NEW_PROJECT_ID>/locations/global/keys/<KEY_ID>
+```
+
+**Step 6 — Add billing admin emails to budget**
+Cloud Console → Billing → Budgets & Alerts → `gemini-spend-guard-<PROJECT_ID>` → Manage notifications
+
+**Step 7 — Restrict the API key in Cloud Console**
+APIs & Services → Credentials → key → API restrictions → Generative Language API only
+
+**Step 8 — Verify Workload Identity works, then remove API key**
+```bash
+# After deploy — test generation features work
+# Then remove the key:
+gcloud run services update <SERVICE_NAME> \
+  --region asia-southeast1 \
+  --remove-env-vars GOOGLE_GEMINI_API_KEY
+```
+
+### Values that change per project
+
+| Value | Where to set |
+|---|---|
+| `PROJECT_ID` | Script argument + Cloud Run env var `GCP_PROJECT_ID` |
+| `BILLING_ACCOUNT_ID` | Script argument (`gcloud billing accounts list`) |
+| `GOOGLE_GEMINI_KEY_NAME` | Cloud Run env var (`gcloud alpha services api-keys list`) |
+| `GEMINI_DAILY_LIMIT_PER_USER` | Cloud Run env var (default: 50) |
+| Cloud Run `SERVICE_NAME` | Step 4 & 5 commands |
+
+Everything else (Pub/Sub topic name, function name, Firestore paths, middleware code) is identical across all projects.
 
 ---
 
