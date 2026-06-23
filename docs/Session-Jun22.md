@@ -63,6 +63,36 @@ Server's `prepareImagesForRemix` expects `[{ url: "..." }]` objects. Original co
 
 ---
 
+## Side Questions — Quick Discussions (Jun 22–23)
+
+### "After changing the thinking budget, can the model still do video analysis?"
+
+Yes — `thinkingBudget: 0` was only applied to `improvePromptWithContext` in `server/src/services/gemini.js`. The standalone video analysis pipeline (`scripts/analyze-video.js`) creates its own `genAI` instance with no thinking config, so it is completely unaffected. The two code paths are independent.
+
+---
+
+### User's Mental Model of ID Grid (Key Insight)
+
+User uploaded the same product photo to all 9 grid slots and expected AI to generate different angle variations per slot automatically. Actual behaviour: the uploaded image just displayed as-is, nine times.
+
+This revealed the missing piece — there was no concept of a "master reference" separate from the 9 output slots. The upload action was filling the output, not seeding input for generation. Led directly to the master image slot + Generate All 9 Angles design.
+
+---
+
+### Two Separate Bugs Caused "Generate All 9 Angles Not Working"
+
+1. **First report**: button was disabled (greyed out, 50% opacity) — master image had not been uploaded to the new master slot yet. Requires master image to be set before the button activates.
+
+2. **Second report** (master image in place, button clickable): `referenceImages` was passed as `["https://..."]` plain strings. Server's `prepareImagesForRemix` reads `img.url` — `undefined` on a string. Axios then fetched `""`, threw an error, which was swallowed by `.catch(() => ({ idx, url: null }))`. No slots updated, no error shown to user. Fixed: pass `[{ url: gridMasterImage }]`.
+
+---
+
+### "/btw" — User's Side Conversation Context
+
+User references "/btw" to mean informal discussions or questions raised in a separate Claude session or window. Key takeaway: **user wants these side conversations saved to Obsidian** so context isn't lost between sessions. See [[Side-Questions-Jun20-21]] for the Jun 20–21 equivalent.
+
+---
+
 ## Files Changed
 
 | File | Change |
