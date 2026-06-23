@@ -24,20 +24,23 @@ const MODELS = {
 class GeminiService {
   constructor() {
     this.apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-    if (!this.apiKey) {
-      throw new Error('GOOGLE_GEMINI_API_KEY is required');
-    }
-
-    // Developer API — text and image generation
-    this.genAI = new GoogleGenAI({ apiKey: this.apiKey });
-
-    // Vertex AI — video generation only (veo-3.1-generate-001 GA, supports 4K)
-    // Falls back to Developer API preview model when GCP_PROJECT_ID is not set (local dev)
     const gcpProject = process.env.GCP_PROJECT_ID;
     const gcpLocation = process.env.GCP_LOCATION || 'us-central1';
+
+    if (!this.apiKey && !gcpProject) {
+      throw new Error('Either GOOGLE_GEMINI_API_KEY or GCP_PROJECT_ID is required');
+    }
+
+    // Developer API — API key auth (fallback, used when Vertex AI not configured)
+    this.genAI = this.apiKey ? new GoogleGenAI({ apiKey: this.apiKey }) : null;
+
+    // Vertex AI — Workload Identity auth (preferred; no API key needed on Cloud Run)
     this.genAIVertex = gcpProject
       ? new GoogleGenAI({ vertexai: true, project: gcpProject, location: gcpLocation })
       : null;
+
+    // Primary client for all calls: prefer Vertex AI (Workload Identity), fall back to API key
+    this.genAIPrimary = this.genAIVertex || this.genAI;
   }
 
   buildSystemPrompt({ basePrompt, styleId }) {
@@ -96,7 +99,7 @@ class GeminiService {
     ].filter(Boolean).join(' ');
 
     try {
-      const { candidates } = await this.genAI.models.generateContent({
+      const { candidates } = await this.genAIPrimary.models.generateContent({
         model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
@@ -180,7 +183,7 @@ class GeminiService {
       { text: userMsg }
     ];
 
-    const { candidates } = await this.genAI.models.generateContent({
+    const { candidates } = await this.genAIPrimary.models.generateContent({
       model: MODELS.text,
       contents: [{ role: 'user', parts }],
       generationConfig: {
@@ -317,7 +320,7 @@ class GeminiService {
       { text: `${purpose} ${constraints} ${styleId && styleId !== 'freeform' ? 'A style preset is selected. Do not add extra quality/camera/film modifiers beyond the preset.' : ''} ${styleId && styleId !== 'bold_graphic_ad' ? 'Do not include embedded text, slogans, or taglines unless explicitly requested; leave negative space for copy instead.' : 'Avoid inventing brand slogans; only use literal words if specified.'}` }
     ];
 
-    const { candidates } = await this.genAI.models.generateContent({
+    const { candidates } = await this.genAIPrimary.models.generateContent({
       model: MODELS.text,
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.9, maxOutputTokens: 200 }
@@ -364,7 +367,7 @@ class GeminiService {
     ].filter(Boolean).join(' ');
 
     try {
-      const { candidates } = await this.genAI.models.generateContent({
+      const { candidates } = await this.genAIPrimary.models.generateContent({
         model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemGuidance }] },
@@ -390,7 +393,7 @@ class GeminiService {
       const imageParts = referenceImageParts.map(ref => ({
         inlineData: { mimeType: ref.image.mimeType, data: ref.image.imageBytes }
       }));
-      const { candidates } = await this.genAI.models.generateContent({
+      const { candidates } = await this.genAIPrimary.models.generateContent({
         model: MODELS.text,
         contents: [{
           role: 'user',
@@ -499,13 +502,13 @@ class GeminiService {
         const tmpPath = path.join(os.tmpdir(), `veo-ref-${Date.now()}.mp4`);
         try {
           fs.writeFileSync(tmpPath, buffer);
-          let uploadedFile = await this.genAI.files.upload({ file: tmpPath, config: { mimeType } });
+          let uploadedFile = await this.genAIPrimary.files.upload({ file: tmpPath, config: { mimeType } });
           console.log('Uploaded video reference to Files API:', uploadedFile.name, 'state:', uploadedFile.state);
           // Poll until ACTIVE (large files may need processing time)
           let polls = 0;
           while (uploadedFile.state === 'PROCESSING' && polls < 30) {
             await new Promise(r => setTimeout(r, 2000));
-            uploadedFile = await this.genAI.files.get({ name: uploadedFile.name });
+            uploadedFile = await this.genAIPrimary.files.get({ name: uploadedFile.name });
             polls++;
             console.log('File state poll', polls, ':', uploadedFile.state);
           }
@@ -770,10 +773,10 @@ class GeminiService {
               });
             } else if (uri && uri.startsWith('files/')) {
               // Developer API — file name reference (e.g. 'files/abc123')
-              await this.genAI.files.download({ file: uri, downloadPath: destPath });
+              await this.genAIPrimary.files.download({ file: uri, downloadPath: destPath });
             } else {
               // Fallback: pass full fileRef and let SDK resolve it
-              await this.genAI.files.download({ file: fileRef, downloadPath: destPath });
+              await this.genAIPrimary.files.download({ file: fileRef, downloadPath: destPath });
             }
           })();
 
@@ -846,7 +849,7 @@ class GeminiService {
         { role: 'user', parts: [{ text: `${systemInstruction}\n\n${enhancedPrompt}` }] }
       ];
 
-      const response = await this.genAI.models.generateContentStream({
+      const response = await this.genAIPrimary.models.generateContentStream({
         model: MODELS.image,
         config,
         contents,
@@ -966,7 +969,7 @@ class GeminiService {
         },
       ];
 
-      const response = await this.genAI.models.generateContentStream({
+      const response = await this.genAIPrimary.models.generateContentStream({
         model: MODELS.image,
         config,
         contents,
@@ -1031,7 +1034,7 @@ class GeminiService {
 
   async researchProductWithSearch(imageUrl) {
     const imageDataParts = await this.prepareImagesForRemix([{ url: imageUrl }]);
-    const { candidates } = await this.genAI.models.generateContent({
+    const { candidates } = await this.genAIPrimary.models.generateContent({
       model: MODELS.text,
       tools: [{ googleSearch: {} }],
       contents: [{
@@ -1091,7 +1094,7 @@ ${aspectRatio ? `Desired aspect ratio: "${aspectRatio}"` : ''}
 Transform this into a high-precision marketing prompt. If an aspect ratio is provided, include it explicitly in technical_specs and avoid conflicting ratios.`;
 
     try {
-      const { candidates } = await this.genAI.models.generateContent({
+      const { candidates } = await this.genAIPrimary.models.generateContent({
         model: MODELS.text,
         contents: [
           { role: 'user', parts: [{ text: systemPrompt }] },
