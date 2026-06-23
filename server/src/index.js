@@ -9,6 +9,8 @@ const videoRoutes = require('./routes/video');
 const brandkitRoutes = require('./routes/brandkit');
 const filesRoutes = require('./routes/files');
 const path = require('path');
+const { authenticate } = require('./middleware/auth');
+const { spendLimit } = require('./middleware/spendLimit');
 
 // Load environment variables
 dotenv.config();
@@ -46,12 +48,12 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Routes
 app.use('/api/search', searchRoutes);
-app.use('/api/generate', generateRoutes);
-app.use('/api/remix', remixRoutes);
+app.use('/api/generate', authenticate, spendLimit, generateRoutes);
+app.use('/api/remix',    authenticate, spendLimit, remixRoutes);
+app.use('/api/video',    authenticate, spendLimit, videoRoutes);
+app.use('/api/prompt',   authenticate, spendLimit, require('./routes/prompt'));
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/brandkit', brandkitRoutes);
-app.use('/api/video', videoRoutes);
-app.use('/api/prompt', require('./routes/prompt'));
 app.use('/api/files', filesRoutes);
 app.use('/api/styles', require('./routes/styles'));
 app.use('/api/billing', require('./routes/billing'));
