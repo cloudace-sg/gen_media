@@ -2,21 +2,6 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 
-async function searchGoogleImages(query, limit = 5) {
-  const key = process.env.GOOGLE_SEARCH_API_KEY;
-  const cx = process.env.GOOGLE_SEARCH_ENGINE_ID;
-  if (!key || !cx) return [];
-  try {
-    const response = await axios.get('https://www.googleapis.com/customsearch/v1', {
-      params: { key, cx, q: query, searchType: 'image', num: limit, imgType: 'photo', safe: 'active' },
-      timeout: 8000
-    });
-    return (response.data.items || []).map(item => ({ url: item.link }));
-  } catch (e) {
-    console.warn('Google Custom Search failed:', e.message);
-    return [];
-  }
-}
 
 const PEXELS_BASE = 'https://api.pexels.com';
 const UNSPLASH_BASE = 'https://api.unsplash.com';
@@ -263,20 +248,18 @@ router.get('/videos', async (req, res) => {
 });
 
 // POST /api/search/product-references
-// Identifies the product in the master image via Gemini, then searches Google Images for references.
+// Uses Gemini + Google Search grounding to research the product and return a visual brief.
 router.post('/product-references', async (req, res) => {
   const { imageUrl } = req.body || {};
   if (!imageUrl) return res.status(400).json({ error: 'imageUrl is required' });
   try {
     const GeminiService = require('../services/gemini');
     const gemini = new GeminiService();
-    const query = await gemini.identifyProductFromImage(imageUrl);
-    if (!query) return res.json({ query: null, references: [] });
-    const references = await searchGoogleImages(query, 5);
-    res.json({ query, references });
+    const context = await gemini.researchProductWithSearch(imageUrl);
+    res.json({ context: context || null });
   } catch (e) {
-    console.error('Product reference search failed:', e.message);
-    res.json({ query: null, references: [] }); // graceful fallback — don't block generation
+    console.error('Product research failed:', e.message);
+    res.json({ context: null }); // graceful fallback — don't block generation
   }
 });
 

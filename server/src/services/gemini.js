@@ -1029,18 +1029,19 @@ class GeminiService {
     }
   }
 
-  async identifyProductFromImage(imageUrl) {
+  async researchProductWithSearch(imageUrl) {
     const imageDataParts = await this.prepareImagesForRemix([{ url: imageUrl }]);
     const { candidates } = await this.genAI.models.generateContent({
       model: MODELS.text,
+      tools: [{ googleSearch: {} }],
       contents: [{
         role: 'user',
         parts: [
           ...imageDataParts,
-          { text: 'Identify this product. Return a concise Google Images search query (max 8 words) to find product photography of this exact item — include brand name and product name. Return ONLY the search query, nothing else. Example: "Red Bull Energy Drink 250ml can" or "Dove Original Beauty Bar soap".' }
+          { text: 'Use Google Search to identify this product, then write a concise visual brief (max 80 words) covering: exact brand name, product name, primary colours, packaging material and shape, label design details, and any distinctive visual features. Plain prose only — no lists, no headers.' }
         ]
       }],
-      generationConfig: { temperature: 0, maxOutputTokens: 64, thinkingConfig: { thinkingBudget: 0 } }
+      generationConfig: { temperature: 0, maxOutputTokens: 256 }
     });
     const text = candidates?.[0]?.content?.parts?.find(p => p.text)?.text?.trim();
     return text || null;

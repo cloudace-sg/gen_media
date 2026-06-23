@@ -72,7 +72,7 @@ const BrandAssetsPage = () => {
   const [gridAllGenerating, setGridAllGenerating] = React.useState(false);
   const [gridPrompts, setGridPrompts] = React.useState(ANGLE_PROMPTS.slice());
   const [gridMasterImage, setGridMasterImage] = React.useState(null);
-  const [gridWebRefs, setGridWebRefs] = React.useState([]); // cached web references for current master
+  const [gridProductContext, setGridProductContext] = React.useState(null); // cached Gemini web research
   const [gridSearchQuery, setGridSearchQuery] = React.useState(null);
   const [sheetBuilding, setSheetBuilding] = React.useState(false);
   const [sheetPreview, setSheetPreview] = React.useState(null); // { dataUrl, savedUrl }
@@ -255,7 +255,7 @@ const BrandAssetsPage = () => {
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('Upload failed');
       setGridMasterImage(url);
-      setGridWebRefs([]);
+      setGridProductContext(null);
       setGridSearchQuery(null);
       await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: url });
     } catch (e) {
@@ -266,28 +266,34 @@ const BrandAssetsPage = () => {
 
   const handleRemoveGridMaster = async () => {
     setGridMasterImage(null);
-    setGridWebRefs([]);
+    setGridProductContext(null);
     setGridSearchQuery(null);
     await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: null });
   };
 
-  const fetchWebRefs = async () => {
-    if (!gridMasterImage) return [];
-    if (gridWebRefs.length > 0) return gridWebRefs; // cached
-    const { query, references } = await searchProductReferences(gridMasterImage);
-    if (query) setGridSearchQuery(query);
-    setGridWebRefs(references || []);
-    return references || [];
+  const fetchProductContext = async () => {
+    if (!gridMasterImage) return null;
+    if (gridProductContext) return gridProductContext; // cached
+    const { context } = await searchProductReferences(gridMasterImage);
+    if (context) {
+      setGridProductContext(context);
+      setGridSearchQuery(context.slice(0, 60) + (context.length > 60 ? '…' : ''));
+    }
+    return context || null;
   };
 
+  const buildAnglePrompt = (anglePrompt, context) =>
+    context ? `${context}\n\nShot angle: ${anglePrompt}` : anglePrompt;
+
   const handleGenerateGridSlot = async (idx) => {
-    const prompt = gridPrompts[idx];
-    if (!prompt.trim()) return;
+    const angle = gridPrompts[idx];
+    if (!angle.trim()) return;
     const next = [...gridGenerating]; next[idx] = true; setGridGenerating(next);
     try {
-      const webRefs = await fetchWebRefs();
-      const refs = gridMasterImage ? [{ url: gridMasterImage }, ...webRefs] : [];
-      const data = await generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs);
+      const context = await fetchProductContext();
+      const prompt = buildAnglePrompt(angle, context);
+      const refs = gridMasterImage ? [{ url: gridMasterImage }] : [];
+      const data = await generateImages(prompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs);
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
       const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
@@ -304,14 +310,15 @@ const BrandAssetsPage = () => {
     if (!gridMasterImage) return;
     setGridAllGenerating(true);
     try {
-      // Fetch web references once, reuse across all 9 generations
-      const webRefs = await fetchWebRefs();
-      const refs = [{ url: gridMasterImage }, ...webRefs];
-      const tasks = gridPrompts.map((prompt, idx) =>
-        generateImages(prompt.trim(), 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs)
+      // Research product once via Gemini + Google Search, reuse for all 9 slots
+      const context = await fetchProductContext();
+      const refs = [{ url: gridMasterImage }];
+      const tasks = gridPrompts.map((angle, idx) => {
+        const prompt = buildAnglePrompt(angle, context);
+        return generateImages(prompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs)
           .then(data => ({ idx, url: (data.results || data)[0]?.url }))
-          .catch(() => ({ idx, url: null }))
-      );
+          .catch(() => ({ idx, url: null }));
+      });
       const results = await Promise.all(tasks);
       const newSlots = [...gridSlots];
       results.forEach(({ idx, url }) => { if (url) newSlots[idx] = url; });
@@ -702,7 +709,7 @@ const BrandAssetsPage = () => {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-dark-text mb-1">Master Product Image</p>
               <p className="text-xs text-dark-text-secondary mb-2">
-                {gridSearchQuery ? <>Identified: <span className="text-accent">{gridSearchQuery}</span> — web references loaded</> : 'This photo is used as reference for all 9 angle generations.'}
+                {gridSearchQuery ? <>Web research: <span className="text-accent">{gridSearchQuery}</span></> : 'This photo is used as reference for all 9 angle generations.'}
               </p>
               <div className="flex gap-2">
                 <input ref={gridMasterUploadRef} type="file" accept="image/*" className="hidden" onChange={handleUploadGridMaster} />
