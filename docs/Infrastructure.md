@@ -120,6 +120,8 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-23** `d7ba12b`: Cloud Build → Cloud Run ✅ SUCCESS — Gemini API billing protection (spendLimit middleware, circuit breaker, setup/test scripts)
+- **2026-06-23** `d7ba12b`: pushed to GitHub
 - **2026-06-23** `f7fccd0`: docs — Gemini API token notes
 - **2026-06-23** `87f17d4`: docs — side questions Jun 22-23
 - **2026-06-23** `71fc37a`: docs — side questions Jun 20-21

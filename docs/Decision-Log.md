@@ -111,6 +111,14 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-23 | `87f17d4` | docs | add side questions from Jun 22-23 to session doc |
 | 2026-06-23 | `f7fccd0` | docs | add Gemini API token notes — OAuth AQ. vs AIza key distinction |
 | 2026-06-23 | _(this commit)_ | docs | session-end Obsidian sync — infra deployments, /btw discussions captured |
+| 2026-06-23 | `70dd89a` | docs | session-end Obsidian sync — infra deployments + btw discussions |
+| 2026-06-23 | `677a684` | feat | add /btw skill + BTW-Notes.md for capturing side discussions |
+| 2026-06-23 | `814c014` | btw | capture side sessions Jun 18–20 (SOW audit, audio research, TRD bottle) |
+| 2026-06-23 | `ff4bc59` | chore | btw-saves: security/billing Q&A + Firebase deprecation clarification |
+| 2026-06-23 | `e1f801d` | chore | btw-saves: security/billing full design — tiered thresholds, spendLimit, Cloud Quotas, 5-layer stack |
+| 2026-06-23 | `e188cec` | chore | btw-saves: revise security design — project-level, drop SCC, free detection stack |
+| 2026-06-23 | `935f235` | feat | Gemini API billing protection — spendLimit middleware, circuit breaker, setup/test scripts |
+| 2026-06-23 | `d7ba12b` | docs | Billing-Protection runbook — setup, fake payload testing, reuse guide |
 
 ---
 
