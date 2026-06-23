@@ -96,6 +96,15 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-21 | `9d392f5` | fix | unwrap generateImages response correctly in Brand Assets |
 | 2026-06-21 | `fe6bdf5` | fix | contact sheet shows preview modal before staging, not auto-navigate |
 | 2026-06-21 | `2e389b1` | docs | sync Obsidian vault — Jun 21 session (Brand Assets fixes + auth race) |
+| 2026-06-22 | `eebcc5b` | fix | guard Firebase duplicate-app init + cap Gemini thinking tokens |
+| 2026-06-22 | `4db18d1` | debug | surface Firebase init error in login UI |
+| 2026-06-22 | `9717a5c` | fix | bake Firebase config via .env.production instead of Docker ARGs |
+| 2026-06-22 | `16aa262` | feat | ID Grid master reference image + Generate All 9 Angles |
+| 2026-06-22 | `5136dbb` | fix | pass referenceImages as {url} objects, not plain strings |
+| 2026-06-22 | `b88c92e` | fix | upgrade build stage to Node 20 (browserslist 4.24+ regex compat) |
+| 2026-06-22 | `5260922` | fix | preserve product branding/labels in ID Grid angle generation |
+| 2026-06-22 | `05d15a8` | feat | web reference search before ID Grid angle generation |
+| 2026-06-23 | `05d15a8` | feat | (continued push) web reference search + Obsidian sync |
 
 ---
 
