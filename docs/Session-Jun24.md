@@ -44,7 +44,7 @@ Continuation of Jun 23 billing protection work. Attempted Workload Identity for 
 ## Deployed
 
 - `30c0dc9` → Cloud Build ❌ FAILURE (Vertex AI 404 for gemini-3.x models)
-- `1aeecd2` → Cloud Build ⏳ IN PROGRESS (fix — expected ✅ SUCCESS)
+- `1aeecd2` → Cloud Build ✅ SUCCESS — image generation restored
 
 ## Pending (after build succeeds)
 
