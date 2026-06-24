@@ -27,20 +27,21 @@ class GeminiService {
     const gcpProject = process.env.GCP_PROJECT_ID;
     const gcpLocation = process.env.GCP_LOCATION || 'us-central1';
 
-    if (!this.apiKey && !gcpProject) {
-      throw new Error('Either GOOGLE_GEMINI_API_KEY or GCP_PROJECT_ID is required');
+    if (!this.apiKey) {
+      throw new Error('GOOGLE_GEMINI_API_KEY is required');
     }
 
-    // Developer API — API key auth (fallback, used when Vertex AI not configured)
-    this.genAI = this.apiKey ? new GoogleGenAI({ apiKey: this.apiKey }) : null;
+    // Developer API — text and image generation (gemini-3.x models only exist here, not Vertex AI)
+    this.genAI = new GoogleGenAI({ apiKey: this.apiKey });
 
-    // Vertex AI — Workload Identity auth (preferred; no API key needed on Cloud Run)
+    // Vertex AI — video generation only via Workload Identity (veo-3.1-generate-001 GA, supports 4K)
+    // Falls back to Developer API preview model when GCP_PROJECT_ID is not set (local dev)
     this.genAIVertex = gcpProject
       ? new GoogleGenAI({ vertexai: true, project: gcpProject, location: gcpLocation })
       : null;
 
-    // Primary client for all calls: prefer Vertex AI (Workload Identity), fall back to API key
-    this.genAIPrimary = this.genAIVertex || this.genAI;
+    // Alias for text/image calls — Developer API only (model availability constraint)
+    this.genAIPrimary = this.genAI;
   }
 
   buildSystemPrompt({ basePrompt, styleId }) {
