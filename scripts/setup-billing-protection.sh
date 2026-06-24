@@ -50,8 +50,8 @@ gcloud billing budgets create \
   --threshold-rule=percent=1.00 \
   --threshold-rule=percent=1.20 \
   --notifications-rule-pubsub-topic="projects/$PROJECT_ID/topics/$PUBSUB_TOPIC" \
-  --notifications-rule-monitoring-email-addresses="$ALERT_EMAIL" \
   --filter-projects="projects/$PROJECT_ID"
+echo "    NOTE: add email alerts manually — Cloud Console → Billing → Budgets → gemini-spend-guard-$PROJECT_ID → Manage notifications → add $ALERT_EMAIL"
 
 # ── Step 4: Create Cloud Monitoring alert for Gemini request spike ───────────
 echo "[4/6] Creating Cloud Monitoring spike alert (>200 requests in 5 min)..."

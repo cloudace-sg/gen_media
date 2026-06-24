@@ -120,6 +120,13 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-24** `1aeecd2`: Cloud Build → Cloud Run ⏳ IN PROGRESS — revert text/image to Developer API (gemini-3.x not on Vertex AI)
+- **2026-06-24** `1aeecd2`: pushed to GitHub
+- **2026-06-23** `a1a5de6`: docs — update Billing-Protection: Workload Identity Layer 1, full reuse guide
+- **2026-06-23** `30c0dc9`: Cloud Build → Cloud Run ❌ FAILURE — Workload Identity for text/image (gemini-3.x models not on Vertex AI)
+- **2026-06-23** `30c0dc9`: pushed to GitHub
+- **2026-06-23** `33abc3e`: docs — layer-by-layer explanation in Billing-Protection runbook
+- **2026-06-23** `19e1844`: pushed to GitHub
 - **2026-06-23** `d7ba12b`: Cloud Build → Cloud Run ✅ SUCCESS — Gemini API billing protection (spendLimit middleware, circuit breaker, setup/test scripts)
 - **2026-06-23** `d7ba12b`: pushed to GitHub
 - **2026-06-23** `f7fccd0`: docs — Gemini API token notes

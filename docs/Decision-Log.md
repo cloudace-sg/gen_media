@@ -119,6 +119,11 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-23 | `e188cec` | chore | btw-saves: revise security design — project-level, drop SCC, free detection stack |
 | 2026-06-23 | `935f235` | feat | Gemini API billing protection — spendLimit middleware, circuit breaker, setup/test scripts |
 | 2026-06-23 | `d7ba12b` | docs | Billing-Protection runbook — setup, fake payload testing, reuse guide |
+| 2026-06-23 | `19e1844` | docs | session Jun 23 Obsidian sync — billing protection, BTW skill, deployments |
+| 2026-06-23 | `33abc3e` | docs | add layer-by-layer explanation to Billing-Protection runbook |
+| 2026-06-23 | `30c0dc9` | feat | prefer Workload Identity over API key for all Gemini calls |
+| 2026-06-23 | `a1a5de6` | docs | update Billing-Protection — Workload Identity Layer 1, full reuse guide |
+| 2026-06-24 | `1aeecd2` | fix | revert text/image to Developer API — gemini-3.x models not on Vertex AI |
 
 ---
 
