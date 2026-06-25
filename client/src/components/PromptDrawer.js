@@ -86,6 +86,7 @@ const PurposeDropdown = ({ value, onChange, options, placeholder = "Select purpo
 const PromptDrawer = () => {
   const {
     stagedImages,
+    stageImage,
     clearStagedImages,
     generationSettings,
     setGenerationImageCount,
@@ -287,9 +288,17 @@ const PromptDrawer = () => {
       const lastRow = state.rows[state.rows.length - 1];
       if (lastRow && lastRow.type === 'upload' && lastRow.loading) {
         state.updateRow(lastRow.id, { images: results, loading: false });
+        results.forEach(img => stageImage({ ...img, mediaType: img.mediaType || 'image' }));
       } else {
         addRow({ type: 'upload', title: 'UPLOADS', images: results });
       }
+    } catch (err) {
+      const state = useStore.getState();
+      const lastRow = state.rows[state.rows.length - 1];
+      if (lastRow && lastRow.type === 'upload' && lastRow.loading) {
+        state.updateRow(lastRow.id, { loading: false, error: err.message || 'Upload failed' });
+      }
+      setErrorMsg(err.message || 'Upload failed. Please try again.');
     } finally {
       setLoading('upload', false);
       if (fileInputRef.current) fileInputRef.current.value = '';

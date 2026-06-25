@@ -160,6 +160,11 @@ const Workspace = () => {
                   Uploading...
                 </span>
               )}
+              {row.error && (
+                <span className="text-xs text-red-700 bg-red-300/40 px-2 py-1 rounded">
+                  {row.error}
+                </span>
+              )}
               {row.type === 'remix' && row.loading && (
                 <span className="text-xs text-blue-700 bg-blue-300/40 px-2 py-1 rounded">
                   Remixing... (this may take up to 2 minutes)

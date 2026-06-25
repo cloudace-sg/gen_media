@@ -124,6 +124,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-23 | `30c0dc9` | feat | prefer Workload Identity over API key for all Gemini calls |
 | 2026-06-23 | `a1a5de6` | docs | update Billing-Protection — Workload Identity Layer 1, full reuse guide |
 | 2026-06-24 | `1aeecd2` | fix | revert text/image to Developer API — gemini-3.x models not on Vertex AI |
+| 2026-06-24 | `e3d6df8` | docs | session Jun 24 Obsidian sync — Workload Identity attempt, revert, deployment log |
+| 2026-06-24 | `9e9c529` | docs | mark 1aeecd2 build SUCCESS — image generation restored |
 
 ---
 

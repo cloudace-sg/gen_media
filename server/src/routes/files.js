@@ -66,16 +66,20 @@ async function listLocalFiles(req, res) {
       const ext = path.extname(filename).toLowerCase();
       const contentType = mime.lookup(filename) || 'application/octet-stream';
       
-      // Check if it's a video
       if (contentType.startsWith('video/')) {
         fileType = 'generated_video';
-      } else if (contentType.startsWith('image/')) {
-        // For now, treat all images as uploads since we don't have generation metadata
-        fileType = 'upload';
       }
-      
-      // Apply type filter if specified
-      if (type && type !== fileType) continue;
+
+      // Map client filter values to local fileType values
+      const typeFilterMap = {
+        uploads: 'upload',
+        generated_images: 'generated_image',
+        generated_videos: 'generated_video',
+        generated_remix: 'remix_image',
+        edits: 'edit',
+      };
+      const normalizedFilter = typeFilterMap[type] || type;
+      if (type && normalizedFilter !== fileType) continue;
       
       items.push({
         id: filename,
@@ -107,11 +111,12 @@ async function listLocalFiles(req, res) {
 // GET /api/files
 router.get('/', async (req, res) => {
   try {
-    if (!ensureGcsConfigured(res)) return;
+    // No GCS in local dev — list uploads from disk instead
+    if (!bucketName) return await listLocalFiles(req, res);
     
-    // Check if GCS credentials are available
+    // Check if GCS credentials are available on the specific bucket (not getBuckets which requires storage.Admin)
     try {
-      await storage.getBuckets();
+      await storage.bucket(bucketName).getMetadata();
     } catch (credError) {
       console.warn('GCS credentials not available, falling back to local files:', credError.message);
       // Fall back to local files
