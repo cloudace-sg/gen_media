@@ -60,11 +60,29 @@ export default function MyFilesPage() {
   const [items, setItems] = React.useState([]);
   const [nextToken, setNextToken] = React.useState(null);
   const [type, setType] = React.useState('');
+  const [sortBy, setSortBy] = React.useState('newest');
   const [loading, setLoading] = React.useState(false);
   const [selected, setSelected] = React.useState(null);
   const [selection, setSelection] = React.useState(new Set());
   const { stageImage, triggerExtend } = useStore();
   const navigate = useNavigate();
+
+  const sortOptions = [
+    { value: 'newest', label: 'Newest first' },
+    { value: 'oldest', label: 'Oldest first' },
+    { value: 'az', label: 'Name A → Z' },
+    { value: 'za', label: 'Name Z → A' },
+  ];
+
+  const sortedItems = React.useMemo(() => {
+    const copy = [...items];
+    if (sortBy === 'newest') return copy.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    if (sortBy === 'oldest') return copy.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    const name = (it) => it.key.split('/').pop().toLowerCase();
+    if (sortBy === 'az') return copy.sort((a, b) => name(a).localeCompare(name(b)));
+    if (sortBy === 'za') return copy.sort((a, b) => name(b).localeCompare(name(a)));
+    return copy;
+  }, [items, sortBy]);
 
   const typeOptions = [
     { value: '', label: 'All types' },
@@ -181,6 +199,7 @@ export default function MyFilesPage() {
         right={(
           <div className="flex items-center gap-2">
             <TypeDropdown value={type} onChange={setType} options={typeOptions} />
+            <TypeDropdown value={sortBy} onChange={setSortBy} options={sortOptions} />
             {selection.size > 0 && (
               <>
                 <button
@@ -195,7 +214,7 @@ export default function MyFilesPage() {
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {items.map(card)}
+        {sortedItems.map(card)}
       </div>
 
       <div className="mt-4 flex items-center justify-center">
