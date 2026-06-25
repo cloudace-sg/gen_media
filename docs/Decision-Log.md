@@ -130,7 +130,9 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-25 | `1334d69` | feat | add sort dropdown to My Files page |
 | 2026-06-25 | `52a465e` | docs | session Jun 25 — upload pipeline fix + My Files sort |
 | 2026-06-25 | `fbbd3ec` | fix+test | billing protection completion — fix test script, add unit test, set Cloud Run env vars, create spike alert |
-| 2026-06-25 | `fbbd3ec` | chore | fix+test: complete billing protection — fix test script, add spend-limit unit test, docs |
+| 2026-06-25 | `4fd6743` | docs | update Decision-Log with commit sha fbbd3ec |
+| 2026-06-25 | `95b1d0a` | docs | rewrite Billing-Protection Part 3 — full 10-step reuse guide for new projects |
+| 2026-06-25 | _(this commit)_ | docs | session-end Obsidian sync — billing protection complete, all 5 layers tested |
 
 ---
 
