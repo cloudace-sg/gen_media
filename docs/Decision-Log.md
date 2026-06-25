@@ -128,6 +128,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-24 | `9e9c529` | docs | mark 1aeecd2 build SUCCESS — image generation restored |
 | 2026-06-25 | `cca848e` | fix | My Files always empty in production + upload pipeline |
 | 2026-06-25 | `1334d69` | feat | add sort dropdown to My Files page |
+| 2026-06-25 | `52a465e` | docs | session Jun 25 — upload pipeline fix + My Files sort |
+| 2026-06-25 | _(this commit)_ | fix+test | billing protection completion — fix test script, add unit test, set Cloud Run env vars, create spike alert |
 
 ---
 

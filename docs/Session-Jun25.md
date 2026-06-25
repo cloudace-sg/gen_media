@@ -56,7 +56,48 @@ Sorting is purely client-side on the already-fetched items (`useMemo` on `[items
 - When `ASSET_PUBLIC=public`, uploaded files are made public via `makePublic()` in `uploadBuffer`, so URLs are direct `https://storage.googleapis.com/...` — no signed URL needed.
 - Zustand store is in-memory only (no `persist` middleware) — staged images survive route changes but not page refreshes.
 
+---
+
+## Billing Protection — Completion Session (same day, PM)
+
+All 5 layers of the billing protection stack set up, tested, and verified.
+
+### What was done
+
+| Step | Action | Result |
+|---|---|---|
+| Setup script | `setup-billing-protection.sh` run against `019F64-418A79-6241FB` | Billing Budget + Pub/Sub topic + circuit breaker redeployed |
+| Cloud Run env vars | `GOOGLE_GEMINI_KEY_NAME` + `GEMINI_DAILY_LIMIT_PER_USER=50` set on `gen-media-demo` | Layer 4 now knows which key to disable |
+| Circuit breaker env var | `GOOGLE_GEMINI_KEY_NAME` set on `billing-circuit-breaker` Cloud Run service | Required for the function to call API Keys Admin API |
+| Duplicate budget | Deleted `af8000d9` — kept `3d7cf30d` | One budget remains |
+| Spike alert | Created `Gemini API Request Spike` (>200 req/5 min) in Cloud Monitoring | Layer 5 now active |
+
+### Bugs fixed in test script (`test-billing-protection.sh`)
+
+1. **Double base64 encoding** — script was base64-encoding the payload then passing it to `gcloud pubsub topics publish --message`, which encodes again. Fix: pass raw JSON, let Pub/Sub encode.
+2. **`bc` not installed** — `costAmount` field was empty in payload. Fix: replaced `$(echo "$THRESHOLD * 100" | bc)` with `$(awk "BEGIN {printf \"%.0f\", $THRESHOLD * 100}")`.
+
+### New file: `scripts/test-spend-limit-unit.js`
+
+Unit test for `spendLimit.js` middleware using an in-memory Firestore mock — no server or Firebase token needed. Tests 3 allowed → 2 blocked (429) → admin bypass.
+
+### Test results
+
+| Layer | Test | Result |
+|---|---|---|
+| Layer 2 — spendLimit | Unit test (`test-spend-limit-unit.js`) | ✅ 6/6 passed |
+| Layer 4 — circuit breaker 70/90% | Pub/Sub → deployed function | ✅ Logs `alert-only` |
+| Layer 4 — circuit breaker 100% | Pub/Sub → throwaway key disabled | ✅ `KEY DISABLED` confirmed in logs |
+| Layer 5 — spike alert | Policy verified via CLI | ✅ Active |
+
+### GCP state after this session
+
+- Billing Budget: `gemini-spend-guard-strong-kit-475107-k1` (`3d7cf30d`) — 70/90/100/120% → Pub/Sub `billing-alerts`
+- Circuit breaker function: `billing-circuit-breaker` — `GOOGLE_GEMINI_KEY_NAME` = `genmedia` key
+- Spike alert policy: `14386171872176596674` — `>200 Gemini req/5 min`
+
 ## Related Notes
 
+- [[Billing-Protection]] — full runbook
 - [[Infrastructure]] — Cloud Run, GCS, IAM setup
 - [[Decision-Log]] — commit history

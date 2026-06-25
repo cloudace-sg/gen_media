@@ -97,7 +97,7 @@ test_circuit_breaker() {
 {
   "budgetDisplayName": "gemini-spend-guard-test",
   "alertThresholdExceeded": $THRESHOLD,
-  "costAmount": $(echo "$THRESHOLD * 100" | bc),
+  "costAmount": $(awk "BEGIN {printf \"%.0f\", $THRESHOLD * 100}"),
   "costIntervalStart": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "budgetAmount": 100.0,
   "budgetAmountType": "SPECIFIED_AMOUNT",
@@ -105,12 +105,10 @@ test_circuit_breaker() {
 }
 EOF
 )
-    local B64
-    B64=$(echo "$PAYLOAD" | base64 -w 0)
     info "Publishing fake $LABEL threshold alert ($THRESHOLD) to $PUBSUB_TOPIC..."
     gcloud pubsub topics publish "$PUBSUB_TOPIC" \
       --project="$PROJECT_ID" \
-      --message="$B64" \
+      --message="$PAYLOAD" \
       --attribute="budget=test"
   }
 

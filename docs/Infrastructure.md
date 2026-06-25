@@ -120,6 +120,8 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-06-25** _(this session)_: billing-circuit-breaker Cloud Run updated — `GOOGLE_GEMINI_KEY_NAME` set to `genmedia` key; spike alert created; duplicate budget deleted
+- **2026-06-25** `52a465e`: pushed to GitHub
 - **2026-06-25** `1334d69`: Cloud Build → Cloud Run ✅ SUCCESS — add sort dropdown to My Files page
 - **2026-06-25** `1334d69`: pushed to GitHub
 - **2026-06-25** `cca848e`: Cloud Build → Cloud Run ✅ SUCCESS — fix My Files empty in production (getBuckets→getMetadata) + upload pipeline
