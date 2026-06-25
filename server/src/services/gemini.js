@@ -1140,6 +1140,43 @@ Transform this into a high-precision marketing prompt. If an aspect ratio is pro
    * @param {string} purpose - Output purpose for system prompt
    * @returns {string} Enhanced prompt
    */
+  async expandVideoPrompt({ brief = '', template = '', fields = {}, brandContext = {} }) {
+    const { scene, feature, lighting, mood } = fields;
+    const { productName, productDescription, colors } = brandContext;
+
+    const system = [
+      'You are a Veo video prompt specialist for product commercials.',
+      'Craft a single polished video prompt (2–4 sentences, max 350 characters) using the inputs below.',
+      'Include: what happens on screen, camera movement, lighting, and atmosphere. Fit within 8 seconds of content.',
+      'Output plain text only — no JSON, no bullets, no labels.',
+      'Never mention brand names, font names, or embedded text/slogans inside the prompt.',
+    ].join(' ');
+
+    const ctx = [
+      template ? `Video type: ${template}` : null,
+      productName ? `Product: ${productName}` : null,
+      productDescription ? `Product context: ${productDescription}` : null,
+      colors?.length ? `Brand palette: ${colors.join(', ')}` : null,
+      scene ? `Scene/setting: ${scene}` : null,
+      feature ? `Key feature to highlight: ${feature}` : null,
+      lighting ? `Lighting: ${lighting}` : null,
+      mood ? `Mood: ${mood}` : null,
+      brief ? `User brief: ${brief}` : null,
+    ].filter(Boolean).join('\n');
+
+    const { candidates } = await this.genAIPrimary.models.generateContent({
+      model: MODELS.text,
+      contents: [
+        { role: 'user', parts: [{ text: system }] },
+        { role: 'user', parts: [{ text: ctx || 'Generate a product showcase video prompt.' }] }
+      ],
+      generationConfig: { temperature: 0.85, maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } }
+    });
+
+    const text = candidates?.[0]?.content?.parts?.filter(p => !p.thought).map(p => p.text).join('').trim();
+    return text || '';
+  }
+
   enhancePrompt(prompt, style, purpose = null) {
     const styleEnhancements = {
       photorealistic: 'high quality, photorealistic, detailed, professional photography',

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Image as ImageIcon, Film, X, Upload as UploadIcon, Loader2, Lightbulb, ChevronLeft, ChevronRight, HelpCircle, ChevronDown, Target, Megaphone, FileText, Users, Globe, Camera, Video, Sparkles, Wand2, Plus } from 'lucide-react';
+import { Image as ImageIcon, Film, X, Upload as UploadIcon, Loader2, Lightbulb, ChevronLeft, ChevronRight, HelpCircle, ChevronDown, Target, Megaphone, FileText, Users, Globe, Camera, Video, Sparkles, Wand2, Plus, RotateCcw, Zap, Star, Rocket, Package, Pencil } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { searchImages, searchVideos, generateImages, remixImages, uploadImages, generateVideo, improvePrompt, randomPrompt, listStyles } from '../services/api';
+import { searchImages, searchVideos, generateImages, remixImages, uploadImages, generateVideo, improvePrompt, randomPrompt, listStyles, expandVideoPrompt, getBrandKit } from '../services/api';
 
 const INGREDIENT_SLOTS = [
   { key: 'character', label: 'Character', icon: Users, placeholder: 'e.g. professional woman in modern office attire' },
@@ -15,6 +15,16 @@ const CAMERA_CHIPS = [
   { group: 'Angle',    chips: ['eye level', 'low angle', 'high angle', 'bird\'s eye view', 'over-the-shoulder', 'dutch angle', 'POV'] },
   { group: 'Shot',     chips: ['extreme close-up', 'close-up', 'medium shot', 'wide shot', 'establishing shot'] },
 ];
+
+const VIDEO_TEMPLATES = [
+  { id: '360_reveal',    label: '360° Reveal',     icon: RotateCcw,  hint: 'Product slowly rotating with dramatic lighting' },
+  { id: 'feature_demo', label: 'Feature Demo',     icon: Zap,        hint: 'Close-up highlighting a key product detail' },
+  { id: 'lifestyle',    label: 'Lifestyle',        icon: Star,       hint: 'Product in real-world everyday use' },
+  { id: 'launch_teaser',label: 'Launch Teaser',    icon: Rocket,     hint: 'High-energy dramatic reveal' },
+  { id: 'unboxing',     label: 'Unboxing',         icon: Package,    hint: 'Unwrapping and first-look discovery' },
+];
+const LIGHTING_CHIPS = ['Natural', 'Studio', 'Dramatic', 'Golden Hour'];
+const MOOD_CHIPS     = ['Luxury', 'Energetic', 'Calm', 'Playful'];
 
 // Custom dropdown component for purpose selection
 const PurposeDropdown = ({ value, onChange, options, placeholder = "Select purpose..." }) => {
@@ -157,6 +167,15 @@ const PromptDrawer = () => {
   const [negativePrompt, setNegativePrompt] = useState('');
   const [isRandomizing, setIsRandomizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  // Craft panel
+  const [craftOpen, setCraftOpen] = useState(false);
+  const [craftTemplate, setCraftTemplate] = useState('');
+  const [craftScene, setCraftScene] = useState('');
+  const [craftFeature, setCraftFeature] = useState('');
+  const [craftLighting, setCraftLighting] = useState('');
+  const [craftMood, setCraftMood] = useState('');
+  const [craftBrief, setCraftBrief] = useState('');
+  const [isExpanding, setIsExpanding] = useState(false);
   const [styles, setStyles] = useState([{ id: 'freeform', label: 'Freeform', description: 'No preset' }]);
   useEffect(() => {
     (async () => {
@@ -332,6 +351,48 @@ const PromptDrawer = () => {
       setErrorMsg(`Failed to generate ${slotKey}: ${err.message}`);
     } finally {
       setGeneratingSlot(null);
+    }
+  };
+
+  const handleExpandPrompt = async (autoFromBrand = false) => {
+    setIsExpanding(true);
+    setErrorMsg('');
+    try {
+      let brandContext = {};
+      try {
+        const kit = await getBrandKit();
+        brandContext = {
+          colors: kit.colors || [],
+          productName: null,
+          productDescription: null,
+        };
+        // Pull cached web research summary from store if available
+        const storeAssets = useStore.getState().brandAssets;
+        if (storeAssets?.productContext) {
+          brandContext.productName = storeAssets.productContext.name || null;
+          brandContext.productDescription = storeAssets.productContext.description || null;
+        }
+      } catch (_) {}
+
+      const res = await expandVideoPrompt({
+        brief: autoFromBrand ? '' : craftBrief,
+        template: VIDEO_TEMPLATES.find(t => t.id === craftTemplate)?.label || craftTemplate,
+        fields: {
+          scene: craftScene,
+          feature: craftFeature,
+          lighting: craftLighting,
+          mood: craftMood,
+        },
+        brandContext,
+      });
+      if (res?.prompt) {
+        setPrompt(res.prompt);
+        setCraftOpen(false);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to expand prompt');
+    } finally {
+      setIsExpanding(false);
     }
   };
 
@@ -614,6 +675,166 @@ const PromptDrawer = () => {
               </p>
             ) : (
               <p className="text-xs text-yellow-400">No video staged. Click the video in the workspace to stage it first.</p>
+            )}
+          </div>
+        )}
+
+        {/* Craft Your Prompt — video standard mode only */}
+        {outputMode === 'video' && !isSearchMode && videoSubMode === 'standard' && (
+          <div className="border border-dark-border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setCraftOpen(o => !o)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-dark-bg hover:bg-dark-border transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Pencil className="w-3.5 h-3.5 text-accent" />
+                <span className="text-xs font-medium text-dark-text">Craft Your Prompt</span>
+                {(craftTemplate || craftScene || craftFeature || craftLighting || craftMood || craftBrief) && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-purple-600 text-white text-xs leading-none">
+                    {[craftTemplate, craftScene, craftFeature, craftLighting, craftMood, craftBrief].filter(Boolean).length}
+                  </span>
+                )}
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-dark-text-secondary transition-transform ${craftOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {craftOpen && (
+              <div className="p-3 space-y-3 border-t border-dark-border">
+                {/* Template picker */}
+                <div>
+                  <div className="text-xs text-dark-text-secondary mb-1.5">Video type</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {VIDEO_TEMPLATES.map(({ id, label, icon: TIcon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        title={VIDEO_TEMPLATES.find(t => t.id === id)?.hint}
+                        onClick={() => setCraftTemplate(prev => prev === id ? '' : id)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                          craftTemplate === id
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-dark-border text-dark-text hover:bg-gray-200'
+                        }`}
+                      >
+                        <TIcon className="w-3 h-3" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Scene + Feature */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-dark-text-secondary block mb-1">Scene / Setting</label>
+                    <input
+                      type="text"
+                      value={craftScene}
+                      onChange={e => setCraftScene(e.target.value)}
+                      placeholder="e.g. dark marble surface"
+                      className="w-full p-2 text-xs rounded bg-dark-bg border border-dark-border text-dark-text placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-dark-text-secondary block mb-1">Key Feature</label>
+                    <input
+                      type="text"
+                      value={craftFeature}
+                      onChange={e => setCraftFeature(e.target.value)}
+                      placeholder="e.g. textured grip"
+                      className="w-full p-2 text-xs rounded bg-dark-bg border border-dark-border text-dark-text placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                  </div>
+                </div>
+
+                {/* Lighting chips */}
+                <div>
+                  <div className="text-xs text-dark-text-secondary mb-1.5">Lighting</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {LIGHTING_CHIPS.map(chip => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setCraftLighting(prev => prev === chip ? '' : chip)}
+                        className={`px-2 py-1 rounded text-xs transition-colors ${
+                          craftLighting === chip ? 'bg-purple-600 text-white' : 'bg-dark-border text-dark-text hover:bg-gray-200'
+                        }`}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mood chips */}
+                <div>
+                  <div className="text-xs text-dark-text-secondary mb-1.5">Mood</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MOOD_CHIPS.map(chip => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setCraftMood(prev => prev === chip ? '' : chip)}
+                        className={`px-2 py-1 rounded text-xs transition-colors ${
+                          craftMood === chip ? 'bg-purple-600 text-white' : 'bg-dark-border text-dark-text hover:bg-gray-200'
+                        }`}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Brief */}
+                <div>
+                  <label className="text-xs text-dark-text-secondary block mb-1">Brief (optional)</label>
+                  <textarea
+                    rows={2}
+                    value={craftBrief}
+                    onChange={e => setCraftBrief(e.target.value)}
+                    placeholder="e.g. spinning on dark surface, dramatic reveal at the end"
+                    className="w-full resize-none p-2 text-xs rounded bg-dark-bg border border-dark-border text-dark-text placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={isExpanding}
+                    onClick={() => handleExpandPrompt(true)}
+                    className={`flex-1 h-8 text-xs rounded flex items-center justify-center gap-1 ${
+                      isExpanding ? 'bg-dark-border text-dark-text-secondary cursor-not-allowed' : 'bg-dark-border text-dark-text hover:bg-gray-200'
+                    }`}
+                  >
+                    {isExpanding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    Auto from Brand
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isExpanding}
+                    onClick={() => handleExpandPrompt(false)}
+                    className={`flex-1 h-8 text-xs rounded flex items-center justify-center gap-1 font-medium ${
+                      isExpanding ? 'bg-accent/50 text-black cursor-not-allowed' : 'bg-accent text-black hover:bg-accent-hover'
+                    }`}
+                  >
+                    {isExpanding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                    Expand Prompt
+                  </button>
+                </div>
+
+                {/* Clear craft fields */}
+                {(craftTemplate || craftScene || craftFeature || craftLighting || craftMood || craftBrief) && (
+                  <button
+                    type="button"
+                    onClick={() => { setCraftTemplate(''); setCraftScene(''); setCraftFeature(''); setCraftLighting(''); setCraftMood(''); setCraftBrief(''); }}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Clear all fields
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}

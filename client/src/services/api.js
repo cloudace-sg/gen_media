@@ -194,6 +194,15 @@ export const randomPrompt = async ({ mode, style, aspectRatio, resolution, brand
   }
 };
 
+export const expandVideoPrompt = async ({ brief, template, fields, brandContext }) => {
+  try {
+    const response = await api.post('/prompt/expand', { brief, template, fields, brandContext });
+    return response.data; // { prompt }
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Failed to expand prompt');
+  }
+};
+
 // Styles API
 export const listStyles = async () => {
   const res = await api.get('/styles');

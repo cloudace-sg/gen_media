@@ -60,6 +60,18 @@ router.post('/random', async (req, res) => {
   }
 });
 
+router.post('/expand', async (req, res) => {
+  try {
+    const { brief = '', template = '', fields = {}, brandContext = {} } = req.body || {};
+    const prompt = await getGemini().expandVideoPrompt({ brief, template, fields, brandContext });
+    if (!prompt) return res.status(502).json({ error: 'No prompt returned' });
+    res.json({ prompt });
+  } catch (e) {
+    console.error('Expand prompt error:', e);
+    res.status(500).json({ error: 'Expand failed', message: e.message });
+  }
+});
+
 module.exports = router;
 
 
