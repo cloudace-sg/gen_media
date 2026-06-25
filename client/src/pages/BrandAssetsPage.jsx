@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle, Plus, Star, Grid, Wand2, Download, Loader } from 'lucide-react';
+import { Trash2, Upload, Palette, Type, Image as ImageIcon, HelpCircle, Plus, Star, Grid, Wand2, Download, Loader, ZoomIn, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { useStore } from '../store/useStore';
@@ -13,9 +13,21 @@ const ANGLE_PROMPTS = [
   'Top-down flat lay',
   '45° elevated angle',
   'Back view',
-  'Close-up label detail',
-  'In-hand lifestyle shot',
+  'Three-quarter view',
+  'Elevated perspective, slight tilt',
   'Studio white background',
+];
+
+const DETAIL_PROMPTS = [
+  'Close-up label detail, macro lens',
+  'Cap and seal close-up',
+  'Texture and material surface',
+];
+
+const LIFESTYLE_PROMPTS = [
+  'In-hand lifestyle, natural daylight',
+  'Product on styled surface, editorial lighting',
+  'Product in use, contextual scene',
 ];
 
 async function buildContactSheet(imageUrls) {
@@ -66,21 +78,35 @@ const BrandAssetsPage = () => {
   const [heroError, setHeroError] = React.useState('');
   const heroUploadRef = React.useRef(null);
 
-  // ID Grid state
+  // ID Grid — Angle Views state
   const [gridSlots, setGridSlots] = React.useState(Array(9).fill(null));
   const [gridGenerating, setGridGenerating] = React.useState(Array(9).fill(false));
   const [gridAllGenerating, setGridAllGenerating] = React.useState(false);
   const [gridPrompts, setGridPrompts] = React.useState(ANGLE_PROMPTS.slice());
   const [gridMasterImage, setGridMasterImage] = React.useState(null);
-  const [gridProductContext, setGridProductContext] = React.useState(null); // cached Gemini web research
+  const [gridProductContext, setGridProductContext] = React.useState(null);
   const [gridSearchQuery, setGridSearchQuery] = React.useState(null);
   const [sheetBuilding, setSheetBuilding] = React.useState(false);
-  const [sheetPreview, setSheetPreview] = React.useState(null); // { dataUrl, savedUrl }
+  const [sheetPreview, setSheetPreview] = React.useState(null);
   const gridUploadRefs = React.useRef(Array(9).fill(null).map(() => React.createRef()));
   const gridMasterUploadRef = React.useRef(null);
 
+  // Detail Shots state
+  const [detailSlots, setDetailSlots] = React.useState(Array(3).fill(null));
+  const [detailGenerating, setDetailGenerating] = React.useState(Array(3).fill(false));
+  const [detailAllGenerating, setDetailAllGenerating] = React.useState(false);
+  const [detailPrompts, setDetailPrompts] = React.useState(DETAIL_PROMPTS.slice());
+  const detailUploadRefs = React.useRef(Array(3).fill(null).map(() => React.createRef()));
+
+  // Lifestyle Shots state
+  const [lifestyleSlots, setLifestyleSlots] = React.useState(Array(3).fill(null));
+  const [lifestyleGenerating, setLifestyleGenerating] = React.useState(Array(3).fill(false));
+  const [lifestyleAllGenerating, setLifestyleAllGenerating] = React.useState(false);
+  const [lifestylePrompts, setLifestylePrompts] = React.useState(LIFESTYLE_PROMPTS.slice());
+  const lifestyleUploadRefs = React.useRef(Array(3).fill(null).map(() => React.createRef()));
+
   // My Files picker state
-  const [pickerOpen, setPickerOpen] = React.useState(false); // false | 'hero' | number (grid idx)
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const [pickerFiles, setPickerFiles] = React.useState([]);
   const [pickerLoading, setPickerLoading] = React.useState(false);
 
@@ -98,19 +124,38 @@ const BrandAssetsPage = () => {
     }
   };
 
+  // Returns the current full kit payload for updateBrandKit calls
+  const currentKit = () => ({
+    ...brandAssets,
+    idGrid: gridSlots.filter(Boolean),
+    idGridMaster: gridMasterImage,
+    idDetail: detailSlots.filter(Boolean),
+    idLifestyle: lifestyleSlots.filter(Boolean),
+  });
+
   const handlePickerSelect = async (file) => {
     const url = file.url;
     if (!url) return;
     if (pickerOpen === 'hero') {
-      const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
+      const kit = await updateBrandKit({ ...currentKit(), heroImage: url });
       setBrandAssets(kit);
     } else if (pickerOpen === 'gridMaster') {
       setGridMasterImage(url);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: url });
+      const kit = await updateBrandKit({ ...currentKit(), idGridMaster: url });
       setBrandAssets(kit);
     } else if (typeof pickerOpen === 'number') {
       const slots = [...gridSlots]; slots[pickerOpen] = url; setGridSlots(slots);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
+      const kit = await updateBrandKit({ ...currentKit(), idGrid: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } else if (typeof pickerOpen === 'string' && pickerOpen.startsWith('detail_')) {
+      const idx = parseInt(pickerOpen.split('_')[1]);
+      const slots = [...detailSlots]; slots[idx] = url; setDetailSlots(slots);
+      const kit = await updateBrandKit({ ...currentKit(), idDetail: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } else if (typeof pickerOpen === 'string' && pickerOpen.startsWith('lifestyle_')) {
+      const idx = parseInt(pickerOpen.split('_')[1]);
+      const slots = [...lifestyleSlots]; slots[idx] = url; setLifestyleSlots(slots);
+      const kit = await updateBrandKit({ ...currentKit(), idLifestyle: slots.filter(Boolean) });
       setBrandAssets(kit);
     }
     setPickerOpen(false);
@@ -136,6 +181,16 @@ const BrandAssetsPage = () => {
           setGridSlots(slots);
         }
         if (kit.idGridMaster) setGridMasterImage(kit.idGridMaster);
+        if (Array.isArray(kit.idDetail)) {
+          const slots = Array(3).fill(null);
+          kit.idDetail.forEach((url, i) => { slots[i] = url; });
+          setDetailSlots(slots);
+        }
+        if (Array.isArray(kit.idLifestyle)) {
+          const slots = Array(3).fill(null);
+          kit.idLifestyle.forEach((url, i) => { slots[i] = url; });
+          setLifestyleSlots(slots);
+        }
       } catch (e) {
         console.error('Failed to load brand kit:', e);
       }
@@ -156,7 +211,6 @@ const BrandAssetsPage = () => {
       setBrandAssets(kit);
     } catch (error) {
       console.error('Failed to update color:', error);
-      // Revert local state on error
       setLocalColors(brandAssets.colors || []);
     } finally {
       setIsUpdating(false);
@@ -185,23 +239,19 @@ const BrandAssetsPage = () => {
 
   const handleColorPickerChange = (color) => {
     if (colorPickerOpen !== null) {
-      // Update local state immediately for responsive UI
       const next = [...localColors];
       next[colorPickerOpen] = color;
       setLocalColors(next);
-      // Then update via API
       handlePickColor(colorPickerOpen, color);
     }
   };
 
-  // Close color picker when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event) => {
       if (colorPickerRef.current && !colorPickerRef.current.contains(event.target)) {
         setColorPickerOpen(null);
       }
     };
-
     if (colorPickerOpen !== null) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -217,7 +267,7 @@ const BrandAssetsPage = () => {
       const data = await generateImages(heroPrompt.trim(), 'Product-Focused Advertisement', 1, '1:1');
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
-      const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
+      const kit = await updateBrandKit({ ...currentKit(), heroImage: url });
       setBrandAssets(kit);
     } catch (e) {
       setHeroError(e.message || 'Generation failed');
@@ -233,7 +283,7 @@ const BrandAssetsPage = () => {
       const data = await uploadImages([file]);
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('Upload failed');
-      const kit = await updateBrandKit({ ...brandAssets, heroImage: url, idGrid: gridSlots.filter(Boolean) });
+      const kit = await updateBrandKit({ ...currentKit(), heroImage: url });
       setBrandAssets(kit);
     } catch (e) {
       setHeroError(e.message || 'Upload failed');
@@ -242,11 +292,26 @@ const BrandAssetsPage = () => {
   };
 
   const handleRemoveHero = async () => {
-    const kit = await updateBrandKit({ ...brandAssets, heroImage: null, idGrid: gridSlots.filter(Boolean) });
+    const kit = await updateBrandKit({ ...currentKit(), heroImage: null });
     setBrandAssets(kit);
   };
 
-  // ── ID Grid handlers ─────────────────────────────────────────────────────
+  // ── Shared: web research context ─────────────────────────────────────────
+  const fetchProductContext = async () => {
+    if (!gridMasterImage) return null;
+    if (gridProductContext) return gridProductContext;
+    const { context } = await searchProductReferences(gridMasterImage);
+    if (context) {
+      setGridProductContext(context);
+      setGridSearchQuery(context.slice(0, 60) + (context.length > 60 ? '…' : ''));
+    }
+    return context || null;
+  };
+
+  const buildPrompt = (slotPrompt, context) =>
+    context ? `${context}\n\nShot angle: ${slotPrompt}` : slotPrompt;
+
+  // ── ID Grid — Angle Views handlers ───────────────────────────────────────
   const handleUploadGridMaster = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -257,7 +322,7 @@ const BrandAssetsPage = () => {
       setGridMasterImage(url);
       setGridProductContext(null);
       setGridSearchQuery(null);
-      await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: url });
+      await updateBrandKit({ ...currentKit(), idGridMaster: url });
     } catch (e) {
       console.error('Grid master upload failed:', e);
     }
@@ -268,22 +333,8 @@ const BrandAssetsPage = () => {
     setGridMasterImage(null);
     setGridProductContext(null);
     setGridSearchQuery(null);
-    await updateBrandKit({ ...brandAssets, idGrid: gridSlots.filter(Boolean), idGridMaster: null });
+    await updateBrandKit({ ...currentKit(), idGridMaster: null });
   };
-
-  const fetchProductContext = async () => {
-    if (!gridMasterImage) return null;
-    if (gridProductContext) return gridProductContext; // cached
-    const { context } = await searchProductReferences(gridMasterImage);
-    if (context) {
-      setGridProductContext(context);
-      setGridSearchQuery(context.slice(0, 60) + (context.length > 60 ? '…' : ''));
-    }
-    return context || null;
-  };
-
-  const buildAnglePrompt = (anglePrompt, context) =>
-    context ? `${context}\n\nShot angle: ${anglePrompt}` : anglePrompt;
 
   const handleGenerateGridSlot = async (idx) => {
     const angle = gridPrompts[idx];
@@ -291,13 +342,13 @@ const BrandAssetsPage = () => {
     const next = [...gridGenerating]; next[idx] = true; setGridGenerating(next);
     try {
       const context = await fetchProductContext();
-      const prompt = buildAnglePrompt(angle, context);
+      const prompt = buildPrompt(angle, context);
       const refs = gridMasterImage ? [{ url: gridMasterImage }] : [];
       const data = await generateImages(prompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs);
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('No image returned');
       const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
+      const kit = await updateBrandKit({ ...currentKit(), idGrid: slots.filter(Boolean) });
       setBrandAssets(kit);
     } catch (e) {
       console.error('Grid slot generation failed:', e);
@@ -310,11 +361,10 @@ const BrandAssetsPage = () => {
     if (!gridMasterImage) return;
     setGridAllGenerating(true);
     try {
-      // Research product once via Gemini + Google Search, reuse for all 9 slots
       const context = await fetchProductContext();
       const refs = [{ url: gridMasterImage }];
       const tasks = gridPrompts.map((angle, idx) => {
-        const prompt = buildAnglePrompt(angle, context);
+        const prompt = buildPrompt(angle, context);
         return generateImages(prompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs)
           .then(data => ({ idx, url: (data.results || data)[0]?.url }))
           .catch(() => ({ idx, url: null }));
@@ -323,7 +373,7 @@ const BrandAssetsPage = () => {
       const newSlots = [...gridSlots];
       results.forEach(({ idx, url }) => { if (url) newSlots[idx] = url; });
       setGridSlots(newSlots);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: newSlots.filter(Boolean), idGridMaster: gridMasterImage });
+      const kit = await updateBrandKit({ ...currentKit(), idGrid: newSlots.filter(Boolean) });
       setBrandAssets(kit);
     } finally {
       setGridAllGenerating(false);
@@ -338,7 +388,7 @@ const BrandAssetsPage = () => {
       const url = (data.results || data)[0]?.url;
       if (!url) throw new Error('Upload failed');
       const slots = [...gridSlots]; slots[idx] = url; setGridSlots(slots);
-      const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
+      const kit = await updateBrandKit({ ...currentKit(), idGrid: slots.filter(Boolean) });
       setBrandAssets(kit);
     } catch (e) {
       console.error('Grid slot upload failed:', e);
@@ -348,12 +398,147 @@ const BrandAssetsPage = () => {
 
   const handleRemoveGridSlot = async (idx) => {
     const slots = [...gridSlots]; slots[idx] = null; setGridSlots(slots);
-    const kit = await updateBrandKit({ ...brandAssets, idGrid: slots.filter(Boolean), idGridMaster: gridMasterImage });
+    const kit = await updateBrandKit({ ...currentKit(), idGrid: slots.filter(Boolean) });
     setBrandAssets(kit);
   };
 
+  // ── Detail Shots handlers ─────────────────────────────────────────────────
+  const handleGenerateDetailSlot = async (idx) => {
+    const prompt = detailPrompts[idx];
+    if (!prompt.trim()) return;
+    const next = [...detailGenerating]; next[idx] = true; setDetailGenerating(next);
+    try {
+      const context = await fetchProductContext();
+      const fullPrompt = buildPrompt(prompt, context);
+      const refs = gridMasterImage ? [{ url: gridMasterImage }] : [];
+      const data = await generateImages(fullPrompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs);
+      const url = (data.results || data)[0]?.url;
+      if (!url) throw new Error('No image returned');
+      const slots = [...detailSlots]; slots[idx] = url; setDetailSlots(slots);
+      const kit = await updateBrandKit({ ...currentKit(), idDetail: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      console.error('Detail slot generation failed:', e);
+    } finally {
+      const n = [...detailGenerating]; n[idx] = false; setDetailGenerating(n);
+    }
+  };
+
+  const handleGenerateAllDetail = async () => {
+    if (!gridMasterImage) return;
+    setDetailAllGenerating(true);
+    try {
+      const context = await fetchProductContext();
+      const refs = [{ url: gridMasterImage }];
+      const tasks = detailPrompts.map((p, idx) => {
+        const fullPrompt = buildPrompt(p, context);
+        return generateImages(fullPrompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs)
+          .then(data => ({ idx, url: (data.results || data)[0]?.url }))
+          .catch(() => ({ idx, url: null }));
+      });
+      const results = await Promise.all(tasks);
+      const newSlots = [...detailSlots];
+      results.forEach(({ idx, url }) => { if (url) newSlots[idx] = url; });
+      setDetailSlots(newSlots);
+      const kit = await updateBrandKit({ ...currentKit(), idDetail: newSlots.filter(Boolean) });
+      setBrandAssets(kit);
+    } finally {
+      setDetailAllGenerating(false);
+    }
+  };
+
+  const handleUploadDetailSlot = async (e, idx) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const data = await uploadImages([file]);
+      const url = (data.results || data)[0]?.url;
+      if (!url) throw new Error('Upload failed');
+      const slots = [...detailSlots]; slots[idx] = url; setDetailSlots(slots);
+      const kit = await updateBrandKit({ ...currentKit(), idDetail: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      console.error('Detail slot upload failed:', e);
+    }
+    if (detailUploadRefs.current[idx]?.current) detailUploadRefs.current[idx].current.value = '';
+  };
+
+  const handleRemoveDetailSlot = async (idx) => {
+    const slots = [...detailSlots]; slots[idx] = null; setDetailSlots(slots);
+    const kit = await updateBrandKit({ ...currentKit(), idDetail: slots.filter(Boolean) });
+    setBrandAssets(kit);
+  };
+
+  // ── Lifestyle Shots handlers ──────────────────────────────────────────────
+  const handleGenerateLifestyleSlot = async (idx) => {
+    const prompt = lifestylePrompts[idx];
+    if (!prompt.trim()) return;
+    const next = [...lifestyleGenerating]; next[idx] = true; setLifestyleGenerating(next);
+    try {
+      const context = await fetchProductContext();
+      const fullPrompt = buildPrompt(prompt, context);
+      const refs = gridMasterImage ? [{ url: gridMasterImage }] : [];
+      const data = await generateImages(fullPrompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs);
+      const url = (data.results || data)[0]?.url;
+      if (!url) throw new Error('No image returned');
+      const slots = [...lifestyleSlots]; slots[idx] = url; setLifestyleSlots(slots);
+      const kit = await updateBrandKit({ ...currentKit(), idLifestyle: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      console.error('Lifestyle slot generation failed:', e);
+    } finally {
+      const n = [...lifestyleGenerating]; n[idx] = false; setLifestyleGenerating(n);
+    }
+  };
+
+  const handleGenerateAllLifestyle = async () => {
+    if (!gridMasterImage) return;
+    setLifestyleAllGenerating(true);
+    try {
+      const context = await fetchProductContext();
+      const refs = [{ url: gridMasterImage }];
+      const tasks = lifestylePrompts.map((p, idx) => {
+        const fullPrompt = buildPrompt(p, context);
+        return generateImages(fullPrompt, 'Product-Focused Advertisement', 1, '1:1', 'product_id', refs)
+          .then(data => ({ idx, url: (data.results || data)[0]?.url }))
+          .catch(() => ({ idx, url: null }));
+      });
+      const results = await Promise.all(tasks);
+      const newSlots = [...lifestyleSlots];
+      results.forEach(({ idx, url }) => { if (url) newSlots[idx] = url; });
+      setLifestyleSlots(newSlots);
+      const kit = await updateBrandKit({ ...currentKit(), idLifestyle: newSlots.filter(Boolean) });
+      setBrandAssets(kit);
+    } finally {
+      setLifestyleAllGenerating(false);
+    }
+  };
+
+  const handleUploadLifestyleSlot = async (e, idx) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const data = await uploadImages([file]);
+      const url = (data.results || data)[0]?.url;
+      if (!url) throw new Error('Upload failed');
+      const slots = [...lifestyleSlots]; slots[idx] = url; setLifestyleSlots(slots);
+      const kit = await updateBrandKit({ ...currentKit(), idLifestyle: slots.filter(Boolean) });
+      setBrandAssets(kit);
+    } catch (e) {
+      console.error('Lifestyle slot upload failed:', e);
+    }
+    if (lifestyleUploadRefs.current[idx]?.current) lifestyleUploadRefs.current[idx].current.value = '';
+  };
+
+  const handleRemoveLifestyleSlot = async (idx) => {
+    const slots = [...lifestyleSlots]; slots[idx] = null; setLifestyleSlots(slots);
+    const kit = await updateBrandKit({ ...currentKit(), idLifestyle: slots.filter(Boolean) });
+    setBrandAssets(kit);
+  };
+
+  // ── Contact Sheet ─────────────────────────────────────────────────────────
   const handleMakeContactSheet = async () => {
-    const filled = gridSlots.filter(Boolean);
+    const filled = [...gridSlots, ...detailSlots, ...lifestyleSlots].filter(Boolean);
     if (filled.length === 0) return;
     setSheetBuilding(true);
     try {
@@ -372,7 +557,7 @@ const BrandAssetsPage = () => {
 
   const handleStageContactSheet = () => {
     if (!sheetPreview?.savedUrl) return;
-    stageImage({ id: `idgrid_sheet_${Date.now()}`, title: 'ID Grid Contact Sheet', url: sheetPreview.savedUrl, thumbnail: sheetPreview.savedUrl, source: 'Brand Kit' });
+    stageImage({ id: `idgrid_sheet_${Date.now()}`, title: 'Product Asset Contact Sheet', url: sheetPreview.savedUrl, thumbnail: sheetPreview.savedUrl, source: 'Brand Kit' });
     setSheetPreview(null);
     navigate('/canvas');
   };
@@ -391,12 +576,9 @@ const BrandAssetsPage = () => {
   };
 
   const loadGoogleFont = (fontFamily) => {
-    // Check if font is already loaded
     if (document.querySelector(`link[href*="${fontFamily.replace(/\s+/g, '+')}"]`)) {
       return;
     }
-    
-    // Create and append Google Fonts link
     const link = document.createElement('link');
     link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/\s+/g, '+')}:wght@400;500;700&display=swap`;
     link.rel = 'stylesheet';
@@ -405,9 +587,7 @@ const BrandAssetsPage = () => {
 
   const handleFontChange = async (fontFamily) => {
     try {
-      // Load the font dynamically
       loadGoogleFont(fontFamily);
-      
       const kit = await updateBrandKit({ font: fontFamily, logos: brandAssets.logos, colors: brandAssets.colors });
       setBrandAssets(kit);
     } catch (error) {
@@ -419,6 +599,56 @@ const BrandAssetsPage = () => {
     'Open Sans', 'Roboto', 'Lato', 'Montserrat', 'Source Sans Pro', 'Oswald', 'Raleway', 'PT Sans', 'Lora', 'Merriweather',
     'Playfair Display', 'Inter', 'Poppins', 'Nunito', 'Ubuntu', 'Crimson Text', 'Libre Baskerville', 'Fira Sans', 'Work Sans', 'Cabin'
   ];
+
+  // ── Reusable slot grid renderer ───────────────────────────────────────────
+  const renderSlotGrid = ({ slots, generating, prompts, defaultPrompts, uploadRefs, onSetPrompts, onGenerate, onUpload, onRemove, onPick, onStage, pickerPrefix, cols = 3 }) => (
+    <div className={`grid grid-cols-${cols} gap-3`}>
+      {slots.map((url, idx) => (
+        <div key={idx} className="border border-dark-border rounded-lg overflow-hidden">
+          {url ? (
+            <div className="relative group">
+              <img src={url} alt={`Slot ${idx + 1}`} className="w-full h-32 object-cover bg-dark-bg" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 bg-black/50">
+                <button
+                  onClick={() => onStage(url, idx)}
+                  className="w-7 h-7 rounded bg-accent text-black flex items-center justify-center" title="Use as reference"
+                ><Plus className="h-3.5 w-3.5" /></button>
+                <button onClick={() => onRemove(idx)} className="w-7 h-7 rounded bg-red-600 text-white flex items-center justify-center" title="Remove"><Trash2 className="h-3 w-3" /></button>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                <p className="text-xs text-white truncate">{prompts[idx] || defaultPrompts[idx] || `Slot ${idx + 1}`}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-2 space-y-1.5">
+              <input
+                value={prompts[idx] || ''}
+                onChange={e => { const p = [...prompts]; p[idx] = e.target.value; onSetPrompts(p); }}
+                placeholder={defaultPrompts[idx] || `Slot ${idx + 1}`}
+                className="w-full px-2 h-7 bg-dark-bg border border-dark-border rounded text-xs text-dark-text focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <div className="flex gap-1">
+                <button
+                  onClick={() => onGenerate(idx)}
+                  disabled={generating[idx] || !prompts[idx]?.trim()}
+                  className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1 disabled:opacity-50"
+                >
+                  {generating[idx] ? <Loader className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />} Generate
+                </button>
+                <input ref={uploadRefs.current[idx]} type="file" accept="image/*" className="hidden" onChange={e => onUpload(e, idx)} />
+                <button onClick={() => uploadRefs.current[idx]?.current?.click()} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
+                  <Upload className="h-3 w-3" /> Upload
+                </button>
+                <button onClick={() => onPick(`${pickerPrefix}_${idx}`)} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
+                  My Files
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-6 md:px-8 md:py-8 space-y-6">
@@ -440,11 +670,11 @@ const BrandAssetsPage = () => {
             <ImageIcon className="h-5 w-5 text-accent" />
             <h2 className="text-lg font-semibold text-dark-text">Logos</h2>
           </div>
-          
+
           <div className="mb-4">
             <input ref={logoInputRef} type="file" accept="image/png" multiple className="hidden" onChange={handleUploadLogos} />
-            <button 
-              onClick={() => logoInputRef.current?.click()} 
+            <button
+              onClick={() => logoInputRef.current?.click()}
               className="flex items-center gap-2 px-4 py-2 bg-accent text-black rounded-lg hover:bg-accent-hover transition-colors"
             >
               <Upload className="h-4 w-4" />
@@ -555,11 +785,11 @@ const BrandAssetsPage = () => {
               </div>
             )}
           </div>
-          
+
           <div className="space-y-3">
             {ensureColorSlots(localColors).map((hex, idx) => (
               <div key={idx} className="flex items-center gap-3 relative">
-                <div 
+                <div
                   className="w-10 h-10 rounded border border-dark-border flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                   style={{ backgroundColor: localColors[idx] || '#f0f0f0' }}
                   onClick={() => handleColorSquareClick(idx)}
@@ -571,12 +801,9 @@ const BrandAssetsPage = () => {
                     value={localColors[idx] || ''}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // Update local state immediately for responsive UI
                       const next = [...localColors];
                       next[idx] = value || null;
                       setLocalColors(next);
-                      
-                      // Validate and update via API if valid
                       if (value === '' || /^#[0-9A-Fa-f]{6}$/.test(value)) {
                         handlePickColor(idx, value || null);
                       }
@@ -588,8 +815,8 @@ const BrandAssetsPage = () => {
                   />
                 </div>
                 {localColors[idx] && (
-                  <button 
-                    onClick={() => clearColor(idx)} 
+                  <button
+                    onClick={() => clearColor(idx)}
                     className="text-red-400 hover:text-red-300 p-1 disabled:opacity-50"
                     title="Remove color"
                     disabled={isUpdating}
@@ -597,10 +824,9 @@ const BrandAssetsPage = () => {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 )}
-                
-                {/* Color Picker */}
+
                 {colorPickerOpen === idx && (
-                  <div 
+                  <div
                     ref={colorPickerRef}
                     className="absolute top-12 left-0 z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-3"
                   >
@@ -609,7 +835,7 @@ const BrandAssetsPage = () => {
                       onChange={handleColorPickerChange}
                     />
                     <div className="mt-2 flex items-center gap-2">
-                      <div 
+                      <div
                         className="w-6 h-6 rounded border border-gray-300"
                         style={{ backgroundColor: localColors[idx] || '#000000' }}
                       />
@@ -632,7 +858,7 @@ const BrandAssetsPage = () => {
             <Type className="h-5 w-5 text-accent" />
             <h2 className="text-lg font-semibold text-dark-text">Typography</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-dark-text mb-2">Primary Font</label>
@@ -648,14 +874,14 @@ const BrandAssetsPage = () => {
                 ))}
               </select>
             </div>
-            
+
             {brandAssets.font && (
               <div>
                 <label className="block text-sm font-medium text-dark-text mb-2">Preview</label>
                 <div className="p-4 bg-dark-bg border border-dark-border rounded">
-                  <div 
-                    className="text-lg leading-relaxed text-dark-text" 
-                    style={{ 
+                  <div
+                    className="text-lg leading-relaxed text-dark-text"
+                    style={{
                       fontFamily: `"${brandAssets.font}", sans-serif`,
                       fontWeight: 400
                     }}
@@ -670,26 +896,27 @@ const BrandAssetsPage = () => {
             )}
           </div>
         </div>
+
         {/* ID Grid Section */}
         <div className="bg-dark-surface border border-dark-border rounded-lg p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-3">
               <Grid className="h-5 w-5 text-accent" />
-              <h2 className="text-lg font-semibold text-dark-text">ID Grid</h2>
+              <h2 className="text-lg font-semibold text-dark-text">Product Asset Grid</h2>
             </div>
             <button
               onClick={handleMakeContactSheet}
-              disabled={sheetBuilding || gridSlots.filter(Boolean).length === 0}
+              disabled={sheetBuilding || [...gridSlots, ...detailSlots, ...lifestyleSlots].filter(Boolean).length === 0}
               className="px-3 h-9 rounded bg-purple-600 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50 hover:bg-purple-500"
             >
               {sheetBuilding ? <Loader className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               Make Contact Sheet → Stage for Veo
             </button>
           </div>
-          <p className="text-xs text-dark-text-secondary mb-4">Upload your product photo as the master reference, then generate all 9 angle variations automatically — or fill each slot individually.</p>
+          <p className="text-xs text-dark-text-secondary mb-4">Upload your product photo as the master reference, then generate angle views, detail shots, and lifestyle images — all using web-grounded brand context.</p>
 
           {/* Master product image + Generate All */}
-          <div className="flex items-center gap-3 mb-4 p-3 bg-dark-bg border border-dark-border rounded-lg">
+          <div className="flex items-center gap-3 mb-6 p-3 bg-dark-bg border border-dark-border rounded-lg">
             <div className="flex-shrink-0">
               {gridMasterImage ? (
                 <div className="relative group w-16 h-16 rounded overflow-hidden border border-dark-border">
@@ -709,7 +936,7 @@ const BrandAssetsPage = () => {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-dark-text mb-1">Master Product Image</p>
               <p className="text-xs text-dark-text-secondary mb-2">
-                {gridSearchQuery ? <>Web research: <span className="text-accent">{gridSearchQuery}</span></> : 'This photo is used as reference for all 9 angle generations.'}
+                {gridSearchQuery ? <>Web research: <span className="text-accent">{gridSearchQuery}</span></> : 'This photo seeds all generation sections below. Web research runs once and is reused.'}
               </p>
               <div className="flex gap-2">
                 <input ref={gridMasterUploadRef} type="file" accept="image/*" className="hidden" onChange={handleUploadGridMaster} />
@@ -721,62 +948,142 @@ const BrandAssetsPage = () => {
                 </button>
               </div>
             </div>
-            <button
-              onClick={handleGenerateAllAngles}
-              disabled={!gridMasterImage || gridAllGenerating}
-              className="flex-shrink-0 px-3 h-9 rounded bg-accent text-black text-sm font-medium flex items-center gap-2 disabled:opacity-50 hover:bg-accent/80"
-              title={!gridMasterImage ? 'Upload a master image first' : 'Generate all 9 angles from master image'}
-            >
-              {gridAllGenerating ? <Loader className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              Generate All 9 Angles
-            </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {gridSlots.map((url, idx) => (
-              <div key={idx} className="border border-dark-border rounded-lg overflow-hidden">
-                {url ? (
-                  <div className="relative group">
-                    <img src={url} alt={`Grid ${idx + 1}`} className="w-full h-32 object-cover bg-dark-bg" />
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 bg-black/50">
-                      <button
-                        onClick={() => { stageImage({ id: `brand_grid_${idx}`, title: `ID Grid ${idx + 1}`, url, thumbnail: url, source: 'Brand Kit' }); navigate('/canvas'); }}
-                        className="w-7 h-7 rounded bg-accent text-black flex items-center justify-center" title="Use as reference"
-                      ><Plus className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => handleRemoveGridSlot(idx)} className="w-7 h-7 rounded bg-red-600 text-white flex items-center justify-center" title="Remove"><Trash2 className="h-3 w-3" /></button>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
-                      <p className="text-xs text-white truncate">{gridPrompts[idx] || `Slot ${idx + 1}`}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-2 space-y-1.5">
-                    <input
-                      value={gridPrompts[idx] || ''}
-                      onChange={e => { const p = [...gridPrompts]; p[idx] = e.target.value; setGridPrompts(p); }}
-                      placeholder={ANGLE_PROMPTS[idx] || `Angle ${idx + 1}`}
-                      className="w-full px-2 h-7 bg-dark-bg border border-dark-border rounded text-xs text-dark-text focus:outline-none focus:ring-1 focus:ring-accent"
-                    />
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleGenerateGridSlot(idx)}
-                        disabled={gridGenerating[idx] || !gridPrompts[idx]?.trim()}
-                        className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1 disabled:opacity-50"
-                      >
-                        {gridGenerating[idx] ? <Loader className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />} Generate
-                      </button>
-                      <input ref={gridUploadRefs.current[idx]} type="file" accept="image/*" className="hidden" onChange={e => handleUploadGridSlot(e, idx)} />
-                      <button onClick={() => gridUploadRefs.current[idx]?.current?.click()} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
-                        <Upload className="h-3 w-3" /> Upload
-                      </button>
-                      <button onClick={() => openPicker(idx)} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
-                        My Files
-                      </button>
-                    </div>
-                  </div>
-                )}
+          {/* Angle Views */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Grid className="h-4 w-4 text-dark-text-secondary" />
+                <h3 className="text-sm font-semibold text-dark-text">Angle Views</h3>
+                <span className="text-xs text-dark-text-secondary">— 9 shots rotating around the product</span>
               </div>
-            ))}
+              <button
+                onClick={handleGenerateAllAngles}
+                disabled={!gridMasterImage || gridAllGenerating}
+                className="px-3 h-8 rounded bg-accent text-black text-xs font-medium flex items-center gap-1.5 disabled:opacity-50 hover:bg-accent/80"
+                title={!gridMasterImage ? 'Upload a master image first' : 'Generate all 9 angles'}
+              >
+                {gridAllGenerating ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                Generate All 9
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {gridSlots.map((url, idx) => (
+                <div key={idx} className="border border-dark-border rounded-lg overflow-hidden">
+                  {url ? (
+                    <div className="relative group">
+                      <img src={url} alt={`Angle ${idx + 1}`} className="w-full h-32 object-cover bg-dark-bg" />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 bg-black/50">
+                        <button
+                          onClick={() => { stageImage({ id: `brand_grid_${idx}`, title: `Angle View ${idx + 1}`, url, thumbnail: url, source: 'Brand Kit' }); navigate('/canvas'); }}
+                          className="w-7 h-7 rounded bg-accent text-black flex items-center justify-center" title="Use as reference"
+                        ><Plus className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => handleRemoveGridSlot(idx)} className="w-7 h-7 rounded bg-red-600 text-white flex items-center justify-center" title="Remove"><Trash2 className="h-3 w-3" /></button>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                        <p className="text-xs text-white truncate">{gridPrompts[idx] || `Slot ${idx + 1}`}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2 space-y-1.5">
+                      <input
+                        value={gridPrompts[idx] || ''}
+                        onChange={e => { const p = [...gridPrompts]; p[idx] = e.target.value; setGridPrompts(p); }}
+                        placeholder={ANGLE_PROMPTS[idx] || `Angle ${idx + 1}`}
+                        className="w-full px-2 h-7 bg-dark-bg border border-dark-border rounded text-xs text-dark-text focus:outline-none focus:ring-1 focus:ring-accent"
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleGenerateGridSlot(idx)}
+                          disabled={gridGenerating[idx] || !gridPrompts[idx]?.trim()}
+                          className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1 disabled:opacity-50"
+                        >
+                          {gridGenerating[idx] ? <Loader className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />} Generate
+                        </button>
+                        <input ref={gridUploadRefs.current[idx]} type="file" accept="image/*" className="hidden" onChange={e => handleUploadGridSlot(e, idx)} />
+                        <button onClick={() => gridUploadRefs.current[idx]?.current?.click()} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
+                          <Upload className="h-3 w-3" /> Upload
+                        </button>
+                        <button onClick={() => openPicker(idx)} className="flex-1 h-7 text-xs rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center gap-1">
+                          My Files
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Detail Shots */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ZoomIn className="h-4 w-4 text-dark-text-secondary" />
+                <h3 className="text-sm font-semibold text-dark-text">Detail Shots</h3>
+                <span className="text-xs text-dark-text-secondary">— close-ups highlighting specific features</span>
+              </div>
+              <button
+                onClick={handleGenerateAllDetail}
+                disabled={!gridMasterImage || detailAllGenerating}
+                className="px-3 h-8 rounded bg-accent text-black text-xs font-medium flex items-center gap-1.5 disabled:opacity-50 hover:bg-accent/80"
+                title={!gridMasterImage ? 'Upload a master image first' : 'Generate all 3 detail shots'}
+              >
+                {detailAllGenerating ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                Generate All 3
+              </button>
+            </div>
+            {renderSlotGrid({
+              slots: detailSlots,
+              generating: detailGenerating,
+              prompts: detailPrompts,
+              defaultPrompts: DETAIL_PROMPTS,
+              uploadRefs: detailUploadRefs,
+              onSetPrompts: setDetailPrompts,
+              onGenerate: handleGenerateDetailSlot,
+              onUpload: handleUploadDetailSlot,
+              onRemove: handleRemoveDetailSlot,
+              onPick: openPicker,
+              onStage: (url, idx) => { stageImage({ id: `brand_detail_${idx}`, title: `Detail Shot ${idx + 1}`, url, thumbnail: url, source: 'Brand Kit' }); navigate('/canvas'); },
+              pickerPrefix: 'detail',
+              cols: 3,
+            })}
+          </div>
+
+          {/* Lifestyle Shots */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-dark-text-secondary" />
+                <h3 className="text-sm font-semibold text-dark-text">Lifestyle Shots</h3>
+                <span className="text-xs text-dark-text-secondary">— product in use, contextual scenes</span>
+              </div>
+              <button
+                onClick={handleGenerateAllLifestyle}
+                disabled={!gridMasterImage || lifestyleAllGenerating}
+                className="px-3 h-8 rounded bg-accent text-black text-xs font-medium flex items-center gap-1.5 disabled:opacity-50 hover:bg-accent/80"
+                title={!gridMasterImage ? 'Upload a master image first' : 'Generate all 3 lifestyle shots'}
+              >
+                {lifestyleAllGenerating ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                Generate All 3
+              </button>
+            </div>
+            {renderSlotGrid({
+              slots: lifestyleSlots,
+              generating: lifestyleGenerating,
+              prompts: lifestylePrompts,
+              defaultPrompts: LIFESTYLE_PROMPTS,
+              uploadRefs: lifestyleUploadRefs,
+              onSetPrompts: setLifestylePrompts,
+              onGenerate: handleGenerateLifestyleSlot,
+              onUpload: handleUploadLifestyleSlot,
+              onRemove: handleRemoveLifestyleSlot,
+              onPick: openPicker,
+              onStage: (url, idx) => { stageImage({ id: `brand_lifestyle_${idx}`, title: `Lifestyle Shot ${idx + 1}`, url, thumbnail: url, source: 'Brand Kit' }); navigate('/canvas'); },
+              pickerPrefix: 'lifestyle',
+              cols: 3,
+            })}
           </div>
         </div>
       </div>
@@ -840,5 +1147,3 @@ const BrandAssetsPage = () => {
 };
 
 export default BrandAssetsPage;
-
-

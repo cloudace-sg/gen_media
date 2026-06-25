@@ -82,6 +82,8 @@ function getBrandKit() {
     if (!('heroImage' in kit)) kit.heroImage = null;
     if (!('idGrid' in kit)) kit.idGrid = [];
     if (!('idGridMaster' in kit)) kit.idGridMaster = null;
+    if (!('idDetail' in kit)) kit.idDetail = [];
+    if (!('idLifestyle' in kit)) kit.idLifestyle = [];
     return kit;
   } catch (_) {}
   // If local read failed or empty, do a best-effort synchronous fallback to empty,
@@ -93,7 +95,7 @@ function getBrandKit() {
       try { fs.writeFileSync(BRANDKIT_FILE, JSON.stringify(fromGcs, null, 2)); } catch (_) {}
     }
   })().catch(()=>{});
-  return { logos: [], colors: [], fonts: [], font: null, heroImage: null, idGrid: [], idGridMaster: null };
+  return { logos: [], colors: [], fonts: [], font: null, heroImage: null, idGrid: [], idGridMaster: null, idDetail: [], idLifestyle: [] };
 }
 
 function setBrandKit(update) {
@@ -107,11 +109,13 @@ function setBrandKit(update) {
     heroImage: 'heroImage' in update ? (update.heroImage || null) : current.heroImage,
     idGrid: Array.isArray(update.idGrid) ? update.idGrid.slice(0, 9) : current.idGrid,
     idGridMaster: 'idGridMaster' in update ? (update.idGridMaster || null) : current.idGridMaster,
+    idDetail: Array.isArray(update.idDetail) ? update.idDetail.slice(0, 3) : current.idDetail,
+    idLifestyle: Array.isArray(update.idLifestyle) ? update.idLifestyle.slice(0, 3) : current.idLifestyle,
   };
   // Write-through local cache
   fs.writeFileSync(BRANDKIT_FILE, JSON.stringify(next, null, 2));
   // Write to GCS synchronously to ensure consistency
-  (async () => { 
+  (async () => {
     const success = await writeBrandKitToGcs(next);
     if (success) {
       console.log('Brand kit synced to GCS successfully');
@@ -180,5 +184,3 @@ module.exports = {
     return keywords.some(k => p.includes(k));
   }
 };
-
-
