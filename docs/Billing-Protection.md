@@ -276,21 +276,28 @@ After the test, re-enable the test key in Cloud Console or delete it.
 
 ## Part 3 — Reuse on a New Project
 
-### Files to copy (5 files)
+### Files to copy
 
 ```
 scripts/setup-billing-protection.sh
 scripts/test-billing-protection.sh
+scripts/test-spend-limit-unit.js
 server/src/middleware/spendLimit.js
 functions/billingCircuitBreaker/          ← whole folder
-server/src/services/gemini.js             ← Workload Identity logic already inside
 ```
 
-### Step-by-step for a new project
+---
 
-**Step 1 — Copy the files above into the new project**
+### Step 1 — Copy the files into the new project
 
-**Step 2 — Wire spendLimit into the new project's Express server**
+Copy all files above. No changes needed — they are project-agnostic.
+
+---
+
+### Step 2 — Wire spendLimit into the Express server
+
+In your `server/src/index.js` (or equivalent):
+
 ```js
 const { authenticate } = require('./middleware/auth');
 const { spendLimit } = require('./middleware/spendLimit');
@@ -301,8 +308,17 @@ app.use('/api/video',    authenticate, spendLimit, videoRoutes);
 app.use('/api/prompt',   authenticate, spendLimit, require('./routes/prompt'));
 ```
 
-**Step 3 — Run the setup script**
+---
+
+### Step 3 — Run the setup script
+
+This creates the Billing Budget, Pub/Sub topic, Cloud Monitoring spike alert, and deploys the circuit breaker Cloud Function.
+
 ```bash
+# Find your billing account ID first
+gcloud billing accounts list
+
+# Run the script
 ./scripts/setup-billing-protection.sh \
   <NEW_PROJECT_ID> \
   <BILLING_ACCOUNT_ID> \
@@ -310,56 +326,175 @@ app.use('/api/prompt',   authenticate, spendLimit, require('./routes/prompt'));
   <MONTHLY_BUDGET_USD>
 ```
 
-**Step 4 — Grant Cloud Run service account permission to call Gemini**
-```bash
-# Get the Cloud Run service account
-gcloud run services describe <SERVICE_NAME> \
-  --region asia-southeast1 \
-  --project <NEW_PROJECT_ID> \
-  --format="value(spec.template.spec.serviceAccountName)"
+> **Known issue:** if `gcloud functions deploy` crashes with `FileNotFoundError` on `.claude/skills/`, it means gcloud is scanning the project directory and hitting a broken symlink. Skip to Step 4 — the function deploys fine via Cloud Build on first push; you only need to set the env var manually (Step 5b).
 
-# Grant Vertex AI access (enables Workload Identity for Gemini)
-gcloud projects add-iam-policy-binding <NEW_PROJECT_ID> \
-  --member="serviceAccount:<SERVICE_ACCOUNT_EMAIL>" \
-  --role="roles/aiplatform.user"
+---
+
+### Step 4 — Find the Gemini API key ID
+
+```bash
+gcloud alpha services api-keys list --project=<NEW_PROJECT_ID>
 ```
 
-**Step 5 — Set Cloud Run env vars**
+Look for the key restricted to `generativelanguage.googleapis.com`. Note the `uid` field — that's your `<KEY_ID>`.
+
+---
+
+### Step 5a — Set env vars on the app's Cloud Run service
+
 ```bash
 gcloud run services update <SERVICE_NAME> \
   --region asia-southeast1 \
+  --project <NEW_PROJECT_ID> \
   --update-env-vars \
     GEMINI_DAILY_LIMIT_PER_USER=50,\
     GCP_PROJECT_ID=<NEW_PROJECT_ID>,\
     GOOGLE_GEMINI_KEY_NAME=projects/<NEW_PROJECT_ID>/locations/global/keys/<KEY_ID>
 ```
 
-**Step 6 — Add billing admin emails to budget**
-Cloud Console → Billing → Budgets & Alerts → `gemini-spend-guard-<PROJECT_ID>` → Manage notifications
+---
 
-**Step 7 — Restrict the API key in Cloud Console**
-APIs & Services → Credentials → key → API restrictions → Generative Language API only
+### Step 5b — Set env var on the circuit breaker Cloud Run service
 
-**Step 8 — Verify Workload Identity works, then remove API key**
+The circuit breaker is a Gen2 Cloud Function, so it runs as a Cloud Run service. It needs `GOOGLE_GEMINI_KEY_NAME` set independently so it knows which key to disable at 100% budget:
+
 ```bash
-# After deploy — test generation features work
-# Then remove the key:
-gcloud run services update <SERVICE_NAME> \
+gcloud run services update billing-circuit-breaker \
   --region asia-southeast1 \
-  --remove-env-vars GOOGLE_GEMINI_API_KEY
+  --project <NEW_PROJECT_ID> \
+  --update-env-vars GOOGLE_GEMINI_KEY_NAME=projects/<NEW_PROJECT_ID>/locations/global/keys/<KEY_ID>
 ```
+
+> This step is easy to miss — the function silently logs `GOOGLE_GEMINI_KEY_NAME not set` and does nothing at 100% if skipped.
+
+---
+
+### Step 6 — Verify the spike alert was created
+
+```bash
+gcloud alpha monitoring policies list --project=<NEW_PROJECT_ID> \
+  --format="table(displayName,enabled)"
+```
+
+You should see `Gemini API Request Spike` listed as enabled. If it's missing (the setup script sometimes skips it silently), create it manually:
+
+```bash
+gcloud alpha monitoring policies create \
+  --project=<NEW_PROJECT_ID> \
+  --policy='{
+    "displayName": "Gemini API Request Spike",
+    "combiner": "OR",
+    "conditions": [{
+      "displayName": "Gemini requests > 200 in 5 min",
+      "conditionThreshold": {
+        "filter": "resource.type=\"consumed_api\" AND metric.type=\"serviceruntime.googleapis.com/api/request_count\" AND resource.labels.service=\"generativelanguage.googleapis.com\"",
+        "aggregations": [{
+          "alignmentPeriod": "300s",
+          "perSeriesAligner": "ALIGN_RATE",
+          "crossSeriesReducer": "REDUCE_SUM"
+        }],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 200,
+        "duration": "0s",
+        "trigger": { "count": 1 }
+      }
+    }],
+    "alertStrategy": { "notificationPrompts": ["OPENED"] },
+    "enabled": true
+  }'
+```
+
+---
+
+### Step 7 — Add email to billing budget (Cloud Console)
+
+Cloud Console → Billing → Budgets & Alerts → `gemini-spend-guard-<PROJECT_ID>` → Manage notifications → add alert email.
+
+> If you are already a billing admin on the account, you are automatically included — no action needed.
+
+---
+
+### Step 8 — Restrict the API key (Cloud Console)
+
+APIs & Services → Credentials → your Gemini key:
+- **Application restrictions** → HTTP referrers → add `https://<your-cloud-run-url>/*` and `http://localhost:3001/*`
+- **API restrictions** → Restrict key → `Generative Language API` only
+- Save
+
+---
+
+### Step 9 — Set Cloud Quotas (Cloud Console)
+
+APIs & Services → Quotas & System Limits → search `Generative Language API`:
+- Requests per day → `5000`
+- Requests per minute per user → `60`
+
+---
+
+### Step 10 — Test all layers
+
+```bash
+# Layer 2 — spendLimit unit test (no server or token needed)
+node scripts/test-spend-limit-unit.js
+
+# Layer 3+4 — Pub/Sub → deployed circuit breaker (safe: 70% and 90% only)
+./scripts/test-billing-protection.sh <NEW_PROJECT_ID> circuit-breaker
+
+# Check function logs
+gcloud functions logs read billing-circuit-breaker \
+  --project=<NEW_PROJECT_ID> \
+  --region=asia-southeast1 \
+  --limit=10
+```
+
+Expected log output:
+```
+[circuit-breaker] threshold=0.7 cost=70 budget=100
+[circuit-breaker] alert-only at 70% — no action taken
+[circuit-breaker] threshold=0.9 cost=90 budget=100
+[circuit-breaker] alert-only at 90% — no action taken
+```
+
+**Optional — test the 100% key disable** using a throwaway key:
+```bash
+# Create throwaway key
+gcloud alpha services api-keys create \
+  --display-name="billing-test-DELETE-ME" \
+  --project=<NEW_PROJECT_ID>
+
+# Get its ID
+gcloud alpha services api-keys list --project=<NEW_PROJECT_ID>
+
+# Run 100% test
+export GOOGLE_GEMINI_KEY_NAME=projects/<NEW_PROJECT_ID>/locations/global/keys/<TEST_KEY_ID>
+./scripts/test-billing-protection.sh <NEW_PROJECT_ID> circuit-breaker
+# type "yes" when prompted
+
+# Verify in logs — should see: KEY DISABLED at 100% threshold
+
+# Clean up
+gcloud alpha services api-keys delete <TEST_KEY_ID> --project=<NEW_PROJECT_ID> --quiet
+
+# Restore real key on circuit breaker
+gcloud run services update billing-circuit-breaker \
+  --region asia-southeast1 \
+  --project <NEW_PROJECT_ID> \
+  --update-env-vars GOOGLE_GEMINI_KEY_NAME=projects/<NEW_PROJECT_ID>/locations/global/keys/<REAL_KEY_ID>
+```
+
+---
 
 ### Values that change per project
 
-| Value | Where to set |
+| Value | Where |
 |---|---|
-| `PROJECT_ID` | Script argument + Cloud Run env var `GCP_PROJECT_ID` |
-| `BILLING_ACCOUNT_ID` | Script argument (`gcloud billing accounts list`) |
-| `GOOGLE_GEMINI_KEY_NAME` | Cloud Run env var (`gcloud alpha services api-keys list`) |
-| `GEMINI_DAILY_LIMIT_PER_USER` | Cloud Run env var (default: 50) |
-| Cloud Run `SERVICE_NAME` | Step 4 & 5 commands |
+| `PROJECT_ID` | Script arg + Cloud Run env var `GCP_PROJECT_ID` |
+| `BILLING_ACCOUNT_ID` | Script arg — `gcloud billing accounts list` |
+| `GOOGLE_GEMINI_KEY_NAME` | Cloud Run env var on **both** app service and `billing-circuit-breaker` |
+| `GEMINI_DAILY_LIMIT_PER_USER` | Cloud Run env var on app service (default: 50) |
+| `SERVICE_NAME` | Your app's Cloud Run service name |
 
-Everything else (Pub/Sub topic name, function name, Firestore paths, middleware code) is identical across all projects.
+Everything else — Pub/Sub topic name, function name, Firestore paths, middleware code — is identical across all projects.
 
 ---
 
