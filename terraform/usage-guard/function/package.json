@@ -1,0 +1,11 @@
+{
+  "name": "gemini-usage-guard",
+  "version": "1.0.0",
+  "description": "Cloud Function: disables Gemini API at 120% monthly budget",
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "dependencies": {
+    "google-auth-library": "^9.0.0",
+    "googleapis": "^140.0.0"
+  }
+}

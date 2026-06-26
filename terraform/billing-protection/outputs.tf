@@ -43,13 +43,26 @@ output "cloud_run_update_command" {
         GOOGLE_GEMINI_KEY_NAME=${google_apikeys_key.gemini.id}
 
     ─────────────────────────────────────────────────────────────────────────────
-    Also wire spendLimit middleware into your Express server if not already done:
+    Step: copy middleware into your server
 
+    The middleware/ folder next to this Terraform module contains:
+      middleware/auth.js          — Firebase ID token verification
+      middleware/spendLimit.js    — per-user daily Gemini call counter
+      middleware/firebaseAdmin.js — Firebase Admin SDK init
+
+    Copy to your server:
+      cp -r ${path.module}/middleware <YOUR_SERVER_SRC>/middleware
+
+    Install the one dependency (if not already present):
+      npm install firebase-admin
+
+    Wire into Express (add authenticate + spendLimit before every Gemini route):
       const { authenticate } = require('./middleware/auth');
       const { spendLimit }   = require('./middleware/spendLimit');
 
       app.use('/api/generate', authenticate, spendLimit, generateRoutes);
       app.use('/api/video',    authenticate, spendLimit, videoRoutes);
-      // add any other Gemini-calling routes above
+      // add any other Gemini-calling routes here
+    ─────────────────────────────────────────────────────────────────────────────
   EOT
 }
