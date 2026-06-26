@@ -15,6 +15,7 @@ client/build/
 
 # Uploads
 server/src/uploads/
+server/uploads/
 
 # OS files
 .DS_Store

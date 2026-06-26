@@ -1,0 +1,390 @@
+[
+  {
+    "variation_name": "tired-to-energised",
+    "veo_prompt": "A young Asian man with short dark hair, wearing a black polo shirt with white collar and cuffs, sits at a desk in a modern office/study, rubbing his right eye with his index finger, looking tired and drained. The desk has a blurred laptop in the background; lighting is soft and neutral. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). A close-up shot of an iPhone screen shows a notification bubble with 'Match starts soon ⚽'. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). Back to the man, his right hand reaches into a sleek black toiletry bag on the desk. He pulls out a small, clear glass bottle of NewMoon ESSENCE OF CHICKEN 鸡精 with a forest-green screw cap and dark liquid. (PRODUCT INTERACTION: Right hand grips the bottle vertically, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). A close-up on the bottle as the man holds it firmly in his left hand, while his right hand rotates the green screw cap counter-clockwise and lifts it off in a continuous, realistic motion, revealing the dark liquid inside. Both hands are clearly visible, with fingers and palms naturally grasping the bottle and cap. (PRODUCT INTERACTION: Left hand stabilizes bottle, right hand unscrews cap. CAP REMOVAL MUST BE REALISTIC, continuous motion, both hands visible, fingers and palms visible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). (TEXT OVERLAY: 'ESSENCE OF CHICKEN' – BOLD WHITE CAPS, TOP HALF, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'UNLEASH YOUR ENERGY' – BOLD WHITE CAPS, BOTTOM HALF, FULLY LEGIBLE, MUST NOT FILL SCREEN). The man then brings the uncapped bottle to his mouth and drinks, the liquid visibly flowing into his mouth and the bottle level decreasing. The scene transitions with a time-lapse effect from day to evening. After drinking, he looks up, visibly energized, and waves cheerfully. (PRODUCT INTERACTION: Man drinks from bottle. CONSUMPTION MUST BE REAL, liquid flows, level decreases. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). Three young Asian men, now energetic and wearing soccer jerseys (one in white with the NewMoon logo, two in blue), are in a cozy living room at night, excitedly cheering and high-fiving in front of a large TV screen showing a soccer match. A coffee table in front of them is laden with snacks and several NewMoon ESSENCE OF CHICKEN 鸡精 bottles. They leap up in celebration, pumping their fists as a goal is scored. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). A close-up shot of a single NewMoon ESSENCE OF CHICKEN 鸡精 bottle resting on a blue and white star-patterned soccer jersey, with a soccer ball nearby and a blurred stadium screen in the background. (PRODUCT INTERACTION: Bottle displayed on jersey, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). Then, the NewMoon ESSENCE OF CHICKEN 鸡精 bottle is shown next to a NewMoon jar of Bird's Nest, both upright on the jersey. Dynamic energy lines pulsate around them. (TEXT OVERLAY: 'SUSTAIN ENERGY' – WHITE CAPS, BOTTOM LEFT; 'STAY STRONG' – WHITE CAPS, BOTTOM CENTER; 'SUPPORT RECOVERY' – WHITE CAPS, BOTTOM RIGHT. ALL FULLY LEGIBLE, MUST NOT FILL SCREEN). The final scene is a grand, brightly lit soccer stadium at night, with confetti falling. A soccer ball rests on the lush green pitch in the foreground, with the NewMoon ESSENCE OF CHICKEN 鸡精 bottle and Bird's Nest jar prominently displayed on the grass. Dynamic lightning and energy graphics fill the mid-ground. (TEXT OVERLAY: 'POWER TO GO BEYOND' – BOLD YELLOW OUTLINED WHITE CAPS, CENTER, LARGE, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'GAME ON, ENERGY UP' – BOLD WHITE CAPS, BELOW CENTER, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'SUSTAIN ENERGY' – WHITE CAPS, BOTTOM LEFT; 'STAY STRONG' – WHITE CAPS, BOTTOM CENTER; 'SUPPORT RECOVERY' – WHITE CAPS, BOTTOM RIGHT. ALL FULLY LEGIBLE, MUST NOT FILL SCREEN). (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top center, fully legible).",
+    "product_interaction_scenes": [
+      {
+        "timestamp": "00:02",
+        "action": "Man's right hand reaches into a black toiletry bag on the desk and pulls out a small, clear glass bottle of NewMoon ESSENCE OF CHICKEN 鸡精.",
+        "fidelity_requirement": "Right hand grips bottle, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:03",
+        "action": "Close-up of man's left hand gripping the NewMoon ESSENCE OF CHICKEN 鸡精 bottle, while his right hand unscrews the forest-green cap counter-clockwise and lifts it off in a continuous motion. Both hands are clearly visible, with fingers and palms naturally grasping the bottle and cap.",
+        "fidelity_requirement": "Left hand stabilizes bottle, right hand unscrews cap. CAP REMOVAL MUST BE REALISTIC, continuous motion, both hands visible, fingers and palms visible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:06",
+        "action": "Man raises the uncapped NewMoon ESSENCE OF CHICKEN 鸡精 bottle to his mouth and drinks the dark liquid.",
+        "fidelity_requirement": "CONSUMPTION MUST BE REAL, liquid visibly flows from bottle to mouth, bottle level must visibly decrease. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:08",
+        "action": "Multiple NewMoon ESSENCE OF CHICKEN 鸡精 bottles are on a coffee table alongside snacks, visible as friends cheer.",
+        "fidelity_requirement": "Bottles are upright, labels visible and legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:11",
+        "action": "A single NewMoon ESSENCE OF CHICKEN 鸡精 bottle rests on a blue and white star-patterned soccer jersey.",
+        "fidelity_requirement": "Bottle is upright, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:12",
+        "action": "NewMoon ESSENCE OF CHICKEN 鸡精 bottle and a NewMoon jar of Bird's Nest are displayed side-by-side on the jersey.",
+        "fidelity_requirement": "Both products upright, labels facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times for the bottle."
+      },
+      {
+        "timestamp": "00:14",
+        "action": "NewMoon ESSENCE OF CHICKEN 鸡精 bottle and Bird's Nest jar are prominently displayed on the grass of a soccer stadium.",
+        "fidelity_requirement": "Both products upright, labels facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times for the bottle."
+      }
+    ],
+    "text_overlay_scenes": [
+      {
+        "timestamp": "00:03",
+        "text": "ESSENCE OF CHICKEN",
+        "position": "top half",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:04",
+        "text": "UNLEASH YOUR ENERGY",
+        "position": "bottom half",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "SUSTAIN ENERGY",
+        "position": "bottom left",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "STAY STRONG",
+        "position": "bottom center",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "SUPPORT RECOVERY",
+        "position": "bottom right",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:15",
+        "text": "POWER TO GO BEYOND",
+        "position": "center",
+        "style": "Bold yellow outlined white capitals, large",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:16",
+        "text": "GAME ON, ENERGY UP",
+        "position": "below center",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "SUSTAIN ENERGY",
+        "position": "bottom left",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "STAY STRONG",
+        "position": "bottom center",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "SUPPORT RECOVERY",
+        "position": "bottom right",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      }
+    ],
+    "style_tags": [
+      "cinematic",
+      "commercial",
+      "sports advertisement",
+      "energy boost",
+      "modern office",
+      "living room",
+      "stadium lights",
+      "dynamic transition",
+      "bright",
+      "vibrant colors",
+      "upbeat"
+    ],
+    "suggested_aspect_ratio": "9:16",
+    "suggested_duration": "18s",
+    "camera_movement": "Starts with medium close-up, then close-up on phone, medium shot on desk, dedicated close-up on hands for product interaction, time-lapse transition, medium wide shot in living room, close-up on product, wide shot of stadium.",
+    "confidence_notes": "VEO may struggle with pixel-perfect logo replication, realistic liquid flow/level decrease, and precise continuous cap rotation. Exact facial expressions for 'tired' vs 'energized' can vary. Text overlay positioning and ensuring it doesn't overlap elements (especially product labels) is a common challenge. The time-lapse transition might not be perfectly smooth or convincing. Dynamic energy graphics might vary in style."
+  },
+  {
+    "variation_name": "stadium-hero",
+    "veo_prompt": "A young Asian man with short dark hair, wearing a black polo shirt with white collar and cuffs, sits at a desk, head slightly bowed, slowly rubbing his right eye with his index finger, conveying deep fatigue. The office is modern, dimly lit, emphasizing his exhaustion. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). A rapid cut to a close-up on a smartphone screen revealing a 'Match starts soon ⚽' notification with an urgent tone. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). The man's right hand quickly moves to a black pouch on his desk, pulling out a small, clear glass bottle of NewMoon ESSENCE OF CHICKEN 鸡精 with a forest-green screw cap. (PRODUCT INTERACTION: Right hand grips the bottle vertically, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). A dynamic close-up shot shows his left hand gripping the bottle body firmly, while his right hand efficiently unscrews the green cap in a smooth, continuous, counter-clockwise motion, lifting it cleanly off. Both hands are fully visible, with detailed fingers and palms. (PRODUCT INTERACTION: Left hand stabilizes bottle, right hand unscrews cap. CAP REMOVAL MUST BE REALISTIC, continuous motion, both hands visible, fingers and palms visible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). (TEXT OVERLAY: 'ESSENCE OF CHICKEN' – BOLD WHITE CAPS, TOP HALF, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'UNLEASH YOUR ENERGY' – BOLD WHITE CAPS, BOTTOM HALF, FULLY LEGIBLE, MUST NOT FILL SCREEN). He then quickly raises the uncapped bottle and drinks, liquid visibly flowing, bottle level visibly dropping, his expression transforming from tired to alert and energized in a quick, impactful shot. He finishes and raises a confident hand to wave, ready for action. (PRODUCT INTERACTION: Man drinks from bottle. CONSUMPTION MUST BE REAL, liquid flows, level decreases. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). A dynamic wide shot reveals three friends in a brightly lit living room, intensely watching a soccer match on a large TV. The central man wears a white NewMoon soccer jersey, surrounded by friends in blue jerseys. They explode with joy, jumping, high-fiving, and shouting as a goal lights up the screen, their energy palpable. A coffee table is filled with snacks and multiple NewMoon ESSENCE OF CHICKEN 鸡精 bottles. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). A powerful close-up shot of the NewMoon ESSENCE OF CHICKEN 鸡精 bottle resting on a blue and white star-patterned soccer jersey, with a soccer ball adjacent and the blurred stadium action in the background, conveying strength. (PRODUCT INTERACTION: Bottle displayed on jersey, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). The bottle is joined by a NewMoon jar of Bird's Nest, both standing upright. Electric energy sparks around them, hinting at sustained power. (TEXT OVERLAY: 'SUSTAIN ENERGY' – WHITE CAPS, BOTTOM LEFT; 'STAY STRONG' – WHITE CAPS, BOTTOM CENTER; 'SUPPORT RECOVERY' – WHITE CAPS, BOTTOM RIGHT. ALL FULLY LEGIBLE, MUST NOT FILL SCREEN). The scene culminates in an epic, sweeping wide shot of a magnificent soccer stadium under dazzling lights at night, filled with confetti. The NewMoon ESSENCE OF CHICKEN 鸡精 bottle and Bird's Nest jar stand proudly on the impeccably green pitch near a soccer ball. A powerful, electrifying energy aura surrounds them, with the stadium lights blazing in the background. (TEXT OVERLAY: 'POWER TO GO BEYOND' – BOLD YELLOW OUTLINED WHITE CAPS, CENTER, LARGE, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'GAME ON, ENERGY UP' – BOLD WHITE CAPS, BELOW CENTER, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'SUSTAIN ENERGY' – WHITE CAPS, BOTTOM LEFT; 'STAY STRONG' – WHITE CAPS, BOTTOM CENTER; 'SUPPORT RECOVERY' – WHITE CAPS, BOTTOM RIGHT. ALL FULLY LEGIBLE, MUST NOT FILL SCREEN). (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top center, fully legible).",
+    "product_interaction_scenes": [
+      {
+        "timestamp": "00:02",
+        "action": "Man's right hand reaches into a black toiletry bag on the desk and pulls out a small, clear glass bottle of NewMoon ESSENCE OF CHICKEN 鸡精.",
+        "fidelity_requirement": "Right hand grips bottle, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:03",
+        "action": "Close-up of man's left hand gripping the NewMoon ESSENCE OF CHICKEN 鸡精 bottle, while his right hand unscrews the forest-green cap counter-clockwise and lifts it off in a continuous motion. Both hands are clearly visible, with fingers and palms naturally grasping the bottle and cap.",
+        "fidelity_requirement": "Left hand stabilizes bottle, right hand unscrews cap. CAP REMOVAL MUST BE REALISTIC, continuous motion, both hands visible, fingers and palms visible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:06",
+        "action": "Man raises the uncapped NewMoon ESSENCE OF CHICKEN 鸡精 bottle to his mouth and drinks the dark liquid.",
+        "fidelity_requirement": "CONSUMPTION MUST BE REAL, liquid visibly flows from bottle to mouth, bottle level must visibly decrease. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:08",
+        "action": "Multiple NewMoon ESSENCE OF CHICKEN 鸡精 bottles are on a coffee table alongside snacks, visible as friends cheer.",
+        "fidelity_requirement": "Bottles are upright, labels visible and legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:11",
+        "action": "A single NewMoon ESSENCE OF CHICKEN 鸡精 bottle rests on a blue and white star-patterned soccer jersey.",
+        "fidelity_requirement": "Bottle is upright, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:12",
+        "action": "NewMoon ESSENCE OF CHICKEN 鸡精 bottle and a NewMoon jar of Bird's Nest are displayed side-by-side on the jersey.",
+        "fidelity_requirement": "Both products upright, labels facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times for the bottle."
+      },
+      {
+        "timestamp": "00:14",
+        "action": "NewMoon ESSENCE OF CHICKEN 鸡精 bottle and Bird's Nest jar are prominently displayed on the grass of a soccer stadium.",
+        "fidelity_requirement": "Both products upright, labels facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times for the bottle."
+      }
+    ],
+    "text_overlay_scenes": [
+      {
+        "timestamp": "00:03",
+        "text": "ESSENCE OF CHICKEN",
+        "position": "top half",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:04",
+        "text": "UNLEASH YOUR ENERGY",
+        "position": "bottom half",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "SUSTAIN ENERGY",
+        "position": "bottom left",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "STAY STRONG",
+        "position": "bottom center",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "SUPPORT RECOVERY",
+        "position": "bottom right",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:15",
+        "text": "POWER TO GO BEYOND",
+        "position": "center",
+        "style": "Bold yellow outlined white capitals, large",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:16",
+        "text": "GAME ON, ENERGY UP",
+        "position": "below center",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "SUSTAIN ENERGY",
+        "position": "bottom left",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "STAY STRONG",
+        "position": "bottom center",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "SUPPORT RECOVERY",
+        "position": "bottom right",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      }
+    ],
+    "style_tags": [
+      "dynamic",
+      "high-contrast",
+      "sports commercial",
+      "epic",
+      "energetic",
+      "crisp",
+      "fast-paced",
+      "dramatic lighting",
+      "stadium atmosphere",
+      "heroic"
+    ],
+    "suggested_aspect_ratio": "9:16",
+    "suggested_duration": "18s",
+    "camera_movement": "Begins with a medium close-up, quick cut to phone close-up, then dynamic medium shot on desk, tight close-up on hands during product interaction, fast cut during consumption, dynamic wide shot in living room, powerful close-up on product, culminating in an epic sweeping crane shot of the stadium.",
+    "confidence_notes": "VEO may struggle with pixel-perfect logo replication, realistic liquid flow/level decrease, and precise continuous cap rotation. Achieving distinct 'heroic' facial expressions and energetic body language can be challenging. Text overlay positioning and ensuring it doesn't overlap elements (especially product labels) is a common challenge. The dynamic camera movements and energy graphics might not match the intended intensity and style exactly."
+  },
+  {
+    "variation_name": "handheld-energy",
+    "veo_prompt": "A young Asian man with short dark hair, wearing a black polo shirt with white collar and cuffs, sits at his desk, his hand instinctively rubbing his tired eye. The camera is slightly handheld, giving an intimate, immediate feel to his fatigue in the warm office lighting. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). A quick, handheld close-up of a smartphone screen shows a sudden 'Match starts soon ⚽' notification, slightly shaking. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). The camera quickly pans down to the man's right hand as it swiftly reaches into a black pouch on the desk, his movements urgent, pulling out a small, clear glass bottle of NewMoon ESSENCE OF CHICKEN 鸡精 with a forest-green screw cap. (PRODUCT INTERACTION: Right hand grips the bottle vertically, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). A tight, handheld close-up focuses on his left hand firmly holding the bottle, while his right hand quickly and realistically unscrews the green cap counter-clockwise and lifts it off. Both hands are clear and visible in this dynamic shot, with natural finger and palm movements. (PRODUCT INTERACTION: Left hand stabilizes bottle, right hand unscrews cap. CAP REMOVAL MUST BE REALISTIC, continuous motion, both hands visible, fingers and palms visible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). (TEXT OVERLAY: 'ESSENCE OF CHICKEN' – BOLD WHITE CAPS, TOP HALF, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'UNLEASH YOUR ENERGY' – BOLD WHITE CAPS, BOTTOM HALF, FULLY LEGIBLE, MUST NOT FILL SCREEN). He takes a swift, invigorating gulp from the uncapped bottle, the dark liquid visibly consumed and the bottle level immediately dropping. A rapid time-lapse transition from day to night emphasizes the quick boost. He looks up, eyes bright with renewed energy, and waves emphatically. (PRODUCT INTERACTION: Man drinks from bottle. CONSUMPTION MUST BE REAL, liquid flows, level decreases. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). A dynamic, handheld shot captures three friends in a lively living room, cheering wildly at a soccer match on a TV. The central man, now in a white NewMoon jersey, high-fives his friends in blue jerseys as they all leap up, fists pumping, celebrating a goal with unbridled enthusiasm. The coffee table is messy with snacks and multiple NewMoon ESSENCE OF CHICKEN 鸡精 bottles, contributing to the energetic atmosphere. (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top right, fully legible). A close-up shot, slightly off-kilter, showcases the NewMoon ESSENCE OF CHICKEN 鸡精 bottle resting dynamically on a blue and white star-patterned soccer jersey, a soccer ball nearby, and the blurred, vibrant action of the stadium on the TV in the background. (PRODUCT INTERACTION: Bottle displayed on jersey, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times). A quick cut shows the NewMoon ESSENCE OF CHICKEN 鸡精 bottle alongside a NewMoon jar of Bird's Nest, both standing, with energetic visual effects swirling around them. (TEXT OVERLAY: 'SUSTAIN ENERGY' – WHITE CAPS, BOTTOM LEFT; 'STAY STRONG' – WHITE CAPS, BOTTOM CENTER; 'SUPPORT RECOVERY' – WHITE CAPS, BOTTOM RIGHT. ALL FULLY LEGIBLE, MUST NOT FILL SCREEN). The final scene is a high-energy, immersive wide shot of a dazzling soccer stadium at night, confetti raining down. The NewMoon ESSENCE OF CHICKEN 鸡精 bottle and Bird's Nest jar are prominently featured on the vibrant green pitch, near a soccer ball. A powerful, electrifying energy graphic pulses around them, with the roaring crowd and bright stadium lights in the background, conveying ultimate power. (TEXT OVERLAY: 'POWER TO GO BEYOND' – BOLD YELLOW OUTLINED WHITE CAPS, CENTER, LARGE, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'GAME ON, ENERGY UP' – BOLD WHITE CAPS, BELOW CENTER, FULLY LEGIBLE, MUST NOT FILL SCREEN; 'SUSTAIN ENERGY' – WHITE CAPS, BOTTOM LEFT; 'STAY STRONG' – WHITE CAPS, BOTTOM CENTER; 'SUPPORT RECOVERY' – WHITE CAPS, BOTTOM RIGHT. ALL FULLY LEGIBLE, MUST NOT FILL SCREEN). (NewMoon brand logo with crescent moon and 'NewMoon SINCE 1959' is overlaid at the top center, fully legible).",
+    "product_interaction_scenes": [
+      {
+        "timestamp": "00:02",
+        "action": "Man's right hand reaches into a black toiletry bag on the desk and pulls out a small, clear glass bottle of NewMoon ESSENCE OF CHICKEN 鸡精.",
+        "fidelity_requirement": "Right hand grips bottle, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:03",
+        "action": "Close-up of man's left hand gripping the NewMoon ESSENCE OF CHICKEN 鸡精 bottle, while his right hand unscrews the forest-green cap counter-clockwise and lifts it off in a continuous motion. Both hands are clearly visible, with fingers and palms naturally grasping the bottle and cap.",
+        "fidelity_requirement": "Left hand stabilizes bottle, right hand unscrews cap. CAP REMOVAL MUST BE REALISTIC, continuous motion, both hands visible, fingers and palms visible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:06",
+        "action": "Man raises the uncapped NewMoon ESSENCE OF CHICKEN 鸡精 bottle to his mouth and drinks the dark liquid.",
+        "fidelity_requirement": "CONSUMPTION MUST BE REAL, liquid visibly flows from bottle to mouth, bottle level must visibly decrease. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:08",
+        "action": "Multiple NewMoon ESSENCE OF CHICKEN 鸡精 bottles are on a coffee table alongside snacks, visible as friends cheer.",
+        "fidelity_requirement": "Bottles are upright, labels visible and legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:11",
+        "action": "A single NewMoon ESSENCE OF CHICKEN 鸡精 bottle rests on a blue and white star-patterned soccer jersey.",
+        "fidelity_requirement": "Bottle is upright, label facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times."
+      },
+      {
+        "timestamp": "00:12",
+        "action": "NewMoon ESSENCE OF CHICKEN 鸡精 bottle and a NewMoon jar of Bird's Nest are displayed side-by-side on the jersey.",
+        "fidelity_requirement": "Both products upright, labels facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times for the bottle."
+      },
+      {
+        "timestamp": "00:14",
+        "action": "NewMoon ESSENCE OF CHICKEN 鸡精 bottle and Bird's Nest jar are prominently displayed on the grass of a soccer stadium.",
+        "fidelity_requirement": "Both products upright, labels facing camera, fully legible. SHAPE & SIZE LOCKED. LOGO LOCKED. CROSS-SCENE CONSISTENCY. Product label must remain upright, unaltered, and fully legible at all times for the bottle."
+      }
+    ],
+    "text_overlay_scenes": [
+      {
+        "timestamp": "00:03",
+        "text": "ESSENCE OF CHICKEN",
+        "position": "top half",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:04",
+        "text": "UNLEASH YOUR ENERGY",
+        "position": "bottom half",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "SUSTAIN ENERGY",
+        "position": "bottom left",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "STAY STRONG",
+        "position": "bottom center",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:13",
+        "text": "SUPPORT RECOVERY",
+        "position": "bottom right",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:15",
+        "text": "POWER TO GO BEYOND",
+        "position": "center",
+        "style": "Bold yellow outlined white capitals, large",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:16",
+        "text": "GAME ON, ENERGY UP",
+        "position": "below center",
+        "style": "Bold white capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "SUSTAIN ENERGY",
+        "position": "bottom left",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "STAY STRONG",
+        "position": "bottom center",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      },
+      {
+        "timestamp": "00:17",
+        "text": "SUPPORT RECOVERY",
+        "position": "bottom right",
+        "style": "White capitals",
+        "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label"
+      }
+    ],
+    "style_tags": [
+      "handheld",
+      "urgent",
+      "raw",
+      "energetic",
+      "immersive",
+      "fast cuts",
+      "natural lighting",
+      "upbeat soundtrack",
+      "documentary style",
+      "authentic reactions"
+    ],
+    "suggested_aspect_ratio": "9:16",
+    "suggested_duration": "18s",
+    "camera_movement": "Primarily handheld camera, starting with a medium close-up, quick shaky close-up on phone, dynamic pan to desk, tight handheld close-up on hands for product interaction, rapid time-lapse, energetic handheld medium shot in living room, slightly off-kilter close-up on product, culminating in an immersive handheld wide shot of the stadium.",
+    "confidence_notes": "VEO may struggle with pixel-perfect logo replication, realistic liquid flow/level decrease, and precise continuous cap rotation. The desired 'shaky cam' effect for handheld style might be inconsistently applied. Text overlay positioning and ensuring it doesn't overlap elements (especially product labels) is a common challenge. Achieving the intended urgency and raw energy through dynamic cuts and camera motion can be difficult."
+  }
+]
