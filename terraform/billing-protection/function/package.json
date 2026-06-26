@@ -1,0 +1,11 @@
+{
+  "name": "billing-circuit-breaker",
+  "version": "1.0.0",
+  "description": "Cloud Function: disables Gemini API key when billing budget hits 100%",
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "dependencies": {
+    "google-auth-library": "^9.0.0",
+    "googleapis": "^140.0.0"
+  }
+}
