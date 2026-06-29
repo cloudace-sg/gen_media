@@ -139,7 +139,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-26 | `ec2539b` | docs | sync Decision-Log and Infrastructure — add 9cb54a9/baf19db entries and deployment status |
 | 2026-06-26 | `f3b5126` | chore | add skills config, veo prompt variations, fix uploads gitignore |
 | 2026-06-27 | `45fad58` | feat | add Terraform module for Gemini billing protection |
-| 2026-06-27 | _(this commit)_ | docs | Gemini Usage Guard — simplified Terraform module, new-project setup guide, billing admin handover docs |
+| 2026-06-27 | `7159d82` | docs+feat | Gemini Usage Guard — simplified Terraform module, new-project setup guide, billing admin handover docs |
+| 2026-06-29 | _(this commit)_ | docs | session-end Obsidian sync — delivery model, usage-guard, billing admin access scope |
 
 ---
 
