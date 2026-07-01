@@ -115,6 +115,16 @@ gcloud billing accounts list
 
 ---
 
+---
+
+## Standalone Script Model Upgrade
+
+Upgraded `gemini-2.5-flash` → `gemini-3.5-flash` in both standalone scripts (`scripts/analyze-video.js`, `scripts/test-veo-generation.js`). Stale docstring in `server/src/services/gemini.js` updated to match. Scripts also committed to git for the first time (they were untracked since Jun 20).
+
+Updated [[AI-Services]] to document the standalone scripts section with their models and SOW-22 integration path.
+
+---
+
 ## Related
 - [[Gemini-Usage-Guard]] — full runbook
 - [[New-Project-Setup-Guide]] — end-to-end client handover

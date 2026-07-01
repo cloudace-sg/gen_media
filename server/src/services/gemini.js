@@ -1052,7 +1052,7 @@ class GeminiService {
   }
 
   /**
-   * Enhance user prompt using Gemini 2.5 Flash to create high-precision, marketing-oriented JSON prompt
+   * Enhance user prompt using Gemini 3.5 Flash to create high-precision, marketing-oriented JSON prompt
    * @param {string} userPrompt - Original user prompt
    * @param {string} purpose - Output purpose (e.g., 'Product-Focused Advertisement', 'Social Media Lifestyle Post')
    * @param {Object} brandKit - Brand kit information

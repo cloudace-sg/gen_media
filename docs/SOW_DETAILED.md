@@ -345,30 +345,41 @@ User pastes their company website URL → Gemini with Google Search grounding an
 
 ---
 
-#### SOW-11: Reverse-Engineer to Prompt
+#### SOW-11: Reverse-Engineer to Prompt (Image + Video Analysis)
 
 **Description:**
 User uploads any image or video → AI generates the exact prompt and style settings that would recreate something similar. One-click to generate a new version.
 
+For **images**: Gemini vision analyzes composition, color palette, lighting, subject, and mood — returns a ready-to-use prompt and style preset match.
+
+For **videos**: ffmpeg extracts 5 key frames across the clip, Gemini analyzes the visual sequence for cinematography style, pacing, motion, subject, and audio description — returns both a Veo-ready prompt and a shot-by-shot breakdown. This is the programmatic equivalent of Google Vids' "storyboard from content" feature, but fully API-driven.
+
 **Deliverables:**
-- Backend: new endpoint `POST /api/prompt/reverse` accepting image (base64 or URL)
-- Backend: Gemini vision analyzes the content and produces: suggested prompt, style preset match, aspect ratio, mood descriptors
-- Frontend: "Recreate This" button available when viewing any image (uploaded, searched, or generated)
-- Frontend: populates all Creative Controls fields from the analysis
-- Frontend: user can edit before generating
+- Backend: new endpoint `POST /api/prompt/reverse` accepting image or video (base64, URL, or GCS URI)
+- Backend: for images — Gemini vision analyzes and produces: suggested prompt, style preset match, aspect ratio, mood descriptors
+- Backend: for videos — ffmpeg extracts 5 key frames → Gemini analyzes frame sequence → returns: Veo prompt, shot-by-shot breakdown, audio description, cinematography style, pacing notes
+- Backend: `reverseEngineerPrompt(mediaUrl, mediaType)` method in GeminiService — branches on image vs. video
+- Frontend: "Recreate This" button available when viewing any asset (image or video — uploaded, searched, generated, or in My Files)
+- Frontend: populates all Creative Controls fields from the analysis (prompt, style, aspect ratio, audio description)
+- Frontend: for videos — shows shot-by-shot breakdown panel before generating
+- Frontend: user can edit any field before generating
 
 **Files Modified:**
 - `server/src/routes/prompt.js` (add `/reverse` endpoint)
-- `server/src/services/gemini.js` (add `reverseEngineerPrompt()` method)
-- `client/src/components/ImageGrid.js` or workspace component (add "Recreate" action)
+- `server/src/services/gemini.js` (add `reverseEngineerPrompt()` method with image/video branching)
+- `Dockerfile` (ffmpeg already present from SOW-1)
+- `client/src/components/ImageGrid.js` or workspace component (add "Recreate" action on images)
+- `client/src/pages/MyFilesPage.jsx` (add "Recreate" action on video cards)
+- `client/src/components/ShotBreakdownPanel.js` (new — video analysis results)
 - `client/src/services/api.js` (add reverse-engineer API call)
 
-**Effort:** 1.5 days
-- Day 1: Backend vision analysis + prompt generation
-- Day 1.5: Frontend "Recreate" button + field population
+**Effort:** 2.5 days
+- Day 1: Backend image analysis path — Gemini vision prompt + structured output
+- Day 2: Backend video analysis path — ffmpeg frame extraction + sequence analysis
+- Day 2.5: Frontend "Recreate" button (images + videos) + shot breakdown panel
 
-**Dependencies:** None
-**Risk:** None — leverages existing Gemini vision capabilities.
+**Dependencies:** SOW-1 (ffmpeg in Docker)
+**Risk:** Video frame extraction quality depends on clip length. For short clips (<4s), use 3 frames instead of 5.
 
 ---
 
@@ -404,9 +415,9 @@ When multiple variations are generated (from SOW-3), display them in a side-by-s
 | SOW-8 | Video scene extension | 2d |
 | SOW-9 | Golden prompts library | 2d |
 | SOW-10 | Automated brand profile detection | 2.5d |
-| SOW-11 | Reverse-engineer to prompt | 1.5d |
+| SOW-11 | Reverse-engineer to prompt (image + video) | 2.5d |
 | SOW-12 | A/B comparison view | 1d |
-| **Total** | | **12 days** |
+| **Total** | | **13 days** |
 
 ---
 
@@ -1065,17 +1076,82 @@ Save any successful generation as a reusable template: locked composition/style,
 
 ---
 
+### Phase 7: Advanced Generation Modes
+
+**Objective:** Expand generation capabilities beyond standard image/video — talking avatars, scripted spokesperson videos, and other emerging Veo 3.1 modalities.
+
+---
+
+#### SOW-33: Talking Avatar / AI Spokesperson Video
+
+**Description:**
+User provides a portrait image and a script → platform generates a video of that person speaking the script with natural lip sync, head movement, and synchronized voice — all in a single Veo 3.1 API call. No separate TTS or post-processing required.
+
+This is the programmatic equivalent of Google Vids' AI avatar feature, but fully API-driven using the existing Veo 3.1 infrastructure already in the project. Veo 3.1 generates lip-synced dialogue natively when spoken words are wrapped in double quotation marks in the prompt.
+
+**How it works (technical):**
+- Wrapping dialogue in `"double quotes"` in the Veo prompt triggers Veo's native lip-sync engine
+- Portrait image passed as `imageUrl` (first-frame mode) or `referenceImages` (character consistency mode)
+- `personGeneration: 'allow_adult'` already defaulted in the project when reference images are present
+- No additional API, no ElevenLabs, no ffmpeg audio mux required for standard use
+
+**Deliverables:**
+- Backend: new method `generateTalkingAvatar({ imageUrl, script, voiceStyle, aspectRatio })` in GeminiService
+- Backend: prompt builder that wraps script in quotes and adds cinematography instructions (medium close-up, head-and-shoulders, shallow depth of field)
+- Backend: new endpoint `POST /api/generate/talking-avatar` accepting `{ imageUrl, script, voiceStyle, aspectRatio }`
+- Backend: RAI fallback inherited from existing Veo RAI auto-retry (SOW extra — `9e0899b`) — if portrait blocked, retries as text-to-video with described appearance
+- Frontend: "Talking Avatar" mode in Creative Controls (new tab or mode selector)
+- Frontend: portrait upload slot (single image)
+- Frontend: script textarea with character counter (keep to ~1 sentence per 8s clip)
+- Frontend: voice style selector (warm/friendly, professional, energetic, calm)
+- Frontend: aspect ratio selector (defaults to 9:16 portrait for spokesperson)
+- Frontend: "Stitch clips" guidance when script > 1 sentence (link to Scene Extension)
+
+**Files Modified:**
+- `server/src/services/gemini.js` (add `generateTalkingAvatar()` method — ~30 lines, reuses all existing polling/GCS/RAI infrastructure)
+- `server/src/routes/video.js` (add `/talking-avatar` endpoint)
+- `client/src/components/TalkingAvatarMode.js` (new — portrait upload + script + voice style UI)
+- `client/src/components/PromptDrawer.js` (add Talking Avatar tab/mode)
+- `client/src/services/api.js` (add `generateTalkingAvatar` API call)
+
+**Effort:** 2 days
+- Day 1: Backend `generateTalkingAvatar()` method + `/talking-avatar` route + prompt builder
+- Day 2: Frontend Talking Avatar mode UI — portrait upload, script field, voice style, generate flow
+
+**Dependencies:** SOW-0 (Veo 3.1 GA — already done), SOW-2 (reference images — already done)
+**Risk:**
+- Real-face deepfake protection: Veo RAI may block celebrity/public-figure portraits. Existing RAI fallback handles this automatically.
+- Max 8 seconds per clip: for longer scripts, user must generate multiple clips and stitch via Scene Extension (SOW-8, already done).
+- Voice cloning (custom voices): Veo generates voice natively from the prompt. For branded voice clones (e.g., ElevenLabs), a separate audio mux step with ffmpeg would be needed — out of scope for this SOW, add as SOW-34 if required.
+
+**Notes:**
+- Researched Jul 2026: confirmed no separate "talking avatar" API exists — this is prompt-driven Veo 3.1
+- Google Vids (workspace.google.com/products/vids) offers 53 preset avatars but has no public API — not integrable into the backend
+- For custom branded avatars at scale, Google Vids remains UI-only; this SOW is the programmable equivalent
+
+---
+
+### Phase 7 Summary
+
+| Item | Feature | Effort |
+|------|---------|--------|
+| SOW-33 | Talking avatar / AI spokesperson video | 2d |
+| **Total** | | **2 days** |
+
+---
+
 ## Grand Total
 
 | Phase | Focus | Effort |
 |-------|-------|--------|
 | Phase 1 | Core Quality & Accuracy | 10 days |
-| Phase 2 | Workflow & Creative Intelligence | 12 days |
+| Phase 2 | Workflow & Creative Intelligence | 13 days |
 | Phase 3 | Product Marketing Power Tools | 14 days |
 | Phase 4 | Scale & Automation | 15 days |
 | Phase 5 | Content Intelligence & Trend Agent | 13.5 days |
 | Phase 6 | Collaboration & Platform | 10 days |
-| **TOTAL** | **32 features** | **74.5 days** |
+| Phase 7 | Advanced Generation Modes | 2 days |
+| **TOTAL** | **33 features** | **77.5 days** |
 
 ---
 

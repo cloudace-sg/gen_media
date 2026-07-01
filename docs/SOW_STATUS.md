@@ -5,7 +5,7 @@ status: updated
 
 # SOW Status Tracker
 
-Last updated: 2026-06-18
+Last updated: 2026-07-01
 
 Quick-reference audit of all 32 SOW items plus new additions built beyond the original scope. Source of truth for feature completion.
 
@@ -39,12 +39,14 @@ Quick-reference audit of all 32 SOW items plus new additions built beyond the or
 | SOW-8 | Video Scene Extension | ✅ Done | `0ef8a77`, `580d03f` |
 | SOW-9 | Golden Prompts Library | ❌ Pending | — |
 | SOW-10 | Brand Profile Auto-Detection | ❌ Pending | — |
-| SOW-11 | Reverse-Engineer to Prompt | ❌ Pending | — |
+| SOW-11 | Reverse-Engineer to Prompt (Image + Video Analysis) | 🟡 Partial | — |
 | SOW-12 | A/B Comparison View | ❌ Pending | Blocked on SOW-3 |
 
 **SOW-7 partial:** Staging and "Use as Reference" button work for all asset types. Missing: custom GCS metadata tagging at upload time — file cards don't display the original prompt. This blocks SOW-31 (project folders).
 
 **SOW-8 detail:** "Extend" button on My Files video cards (`0ef8a77`). Extend sub-mode tab in PromptDrawer (`580d03f`). Veo-generated videos use `videoUrl` path (last-frame scene extension). Non-Veo videos extract last frame client-side as image reference.
+
+**SOW-11 partial:** `scripts/analyze-video.js` + `scripts/test-veo-generation.js` built Jun 29–30 as standalone pre-integration prototypes. `analyze-video.js` sends a video to `gemini-3.5-flash` and returns scenes, transcript, events, text overlays, a reverse-engineered VEO prompt (JSON), and a product-swap variant. `test-veo-generation.js` consumes that JSON output and fires a VEO generation, with optional `--tweak` flag for natural-language changes while preserving product fidelity rules. Missing: UI integration (`POST /api/prompt/reverse` endpoint, "Recreate This" button, shot breakdown panel). Integration path: lift functions into `server/src/services/gemini.js` when SOW-11 starts in earnest.
 
 ---
 
@@ -75,13 +77,15 @@ Quick-reference audit of all 32 SOW items plus new additions built beyond the or
 
 | # | Feature | Status |
 |---|---------|--------|
-| SOW-22 | Upload & Analyze Content | ❌ Pending |
+| SOW-22 | Upload & Analyze Content | 🟡 Partial | — |
 | SOW-23 | "Why Does This Work?" Explainer | ❌ Pending — blocked on SOW-22 |
 | SOW-24 | Post-Generation Quality Gate | ❌ Pending — blocked on SOW-1 |
 | SOW-25 | Product Accuracy Check | ❌ Pending — blocked on SOW-14, SOW-24 |
 | SOW-26 | Industry Trend Feed | ❌ Pending |
 | SOW-27 | Competitor Visual Watch | ❌ Pending |
 | SOW-28 | "Create This" Suggestions | ❌ Pending — blocked on SOW-10, SOW-26 |
+
+**SOW-22 partial:** `scripts/analyze-video.js` (built Jun 29) is a working standalone implementation covering the full analysis pipeline — scenes, transcript, events, text overlays, reverse-engineered VEO prompt, and product-swap variant. Model: `gemini-3.5-flash`. Missing: UI integration (`POST /api/analyze/video` endpoint, upload-and-analyze flow in frontend, results panel). The script is the integration source — lift into `server/src/services/gemini.js` when SOW-22 starts.
 
 ---
 
@@ -93,6 +97,16 @@ Quick-reference audit of all 32 SOW items plus new additions built beyond the or
 | SOW-30 | Share & Annotate for Review | ❌ Pending |
 | SOW-31 | Project Folders | ❌ Pending — blocked on SOW-7 metadata |
 | SOW-32 | Collateral Templates | ❌ Pending |
+
+---
+
+## Phase 7 — Advanced Generation Modes
+
+| # | Feature | Status | Commits |
+|---|---------|--------|---------|
+| SOW-33 | Talking Avatar / AI Spokesperson Video | ❌ Pending | — |
+
+**SOW-33 detail:** User provides a portrait image + script → Veo 3.1 generates a lip-synced spokesperson video natively (no ElevenLabs, no ffmpeg audio mux). Dialogue wrapped in `"double quotes"` triggers Veo's native lip-sync engine. Reuses all existing Veo infrastructure (RAI retry, reference images, GCS polling). Frontend: new Talking Avatar mode in PromptDrawer with portrait upload + script textarea + voice style selector.
 
 ---
 
@@ -116,12 +130,13 @@ Built during Jun 18 2026 session. Not in original scope.
 | Phase | Total | ✅ Done | 🟡 Partial | ❌ Pending |
 |-------|-------|--------|-----------|-----------|
 | Phase 1 | 7 | 3 | 0 | 4 |
-| Phase 2 | 6 | 1 | 1 | 4 |
+| Phase 2 | 6 | 1 | 2 | 3 |
 | Phase 3 | 5 | 0 | 0 | 5 |
 | Phase 4 | 4 | 0 | 0 | 4 |
-| Phase 5 | 7 | 0 | 0 | 7 |
+| Phase 5 | 7 | 0 | 1 | 6 |
 | Phase 6 | 4 | 0 | 0 | 4 |
-| **SOW Total** | **32** | **4 (13%)** | **1 (3%)** | **27 (84%)** |
+| Phase 7 | 1 | 0 | 0 | 1 |
+| **SOW Total** | **33** | **4 (12%)** | **3 (9%)** | **26 (79%)** |
 | New additions | 6 | 6 | — | — |
 
 ---

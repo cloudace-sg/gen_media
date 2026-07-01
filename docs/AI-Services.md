@@ -80,6 +80,41 @@ All three routes apply brand placeholder resolution before calling the service:
 
 Prompt enhancement for text tasks uses `rewritePromptForImageTask()` (text model) to produce a concise ≤240-character instruction before sending to the image model.
 
+## Standalone Scripts (`scripts/`)
+
+Exploration and one-shot generation scripts for Gemini quality validation and VEO product commercial generation. All read `GOOGLE_GEMINI_API_KEY` from `server/.env` via dotenv.
+
+| Script | Model | Purpose |
+|---|---|---|
+| `scripts/analyze-video.js` | `gemini-3.5-flash` | Full video understanding — scenes, transcript, events, text overlays, reverse prompt, product swap |
+| `scripts/test-veo-generation.js` | `gemini-3.5-flash` (tweak) + `veo-3.1-generate-preview` (generation) | Fire VEO generation from reverse-prompt JSON; `--tweak` applies natural language changes while preserving all product fidelity rules |
+| `scripts/generate-newmoon-worldcup.js` | `veo-3.1-generate-preview` | One-shot: New Moon World Cup commercial — Bird's Nest + Essence of Chicken, family at home late night watching match |
+| `scripts/generate-birdsnest-lady.js` | `veo-3.1-generate-preview` | One-shot: Bird's Nest single-product video — lady at home late night, uncap → place cap on table → drink |
+| `scripts/generate-chicken-essence-lady.js` | `veo-3.1-generate-preview` | One-shot: Essence of Chicken single-product video — same lady, same setting, same cap-off action sequence |
+
+`analyze-video.js` and `test-veo-generation.js` were built Jun 20 as pre-SOW-22 validation. Model upgraded from `gemini-2.5-flash` to `gemini-3.5-flash` on Jun 29. Product commercial scripts were built Jun 30 for New Moon client. Integration path: lift functions into `server/src/services/gemini.js` when SOW-22 starts.
+
+### VEO Safety Filter Notes (Jun 30)
+
+VEO's safety classifier can block product consumption videos. Key patterns observed:
+
+- **Alcohol false-positive**: "pale golden liquid in a transparent glass jar consumed at night" matches alcohol consumption. Fix: add `"traditional Chinese nutritional health food supplement, not an alcoholic beverage"` to the prompt.
+- **Reference image count**: Using `image (8).png` (both products uncapped) alongside the Bird's Nest front hero increased filter hit rate. Reducing to 1 reference image (front hero only) resolved it for Bird's Nest.
+- **Prompt tone**: Over-engineered prompts with all-caps instruction language (`ABSOLUTE RULE`, `FIDELITY RULES`) increase filter hit rate. Narrative/cinematic style passes more reliably.
+- **Filter is stochastic**: the same prompt may pass one attempt and fail the next. Incremental prompt changes + retry is the right approach.
+- **Essence of Chicken never filtered**: dark brown opaque liquid does not trigger the alcohol pattern.
+
+### VEO Prompt Engineering Patterns
+
+| Pattern | Effect |
+|---|---|
+| Numbered sequential actions ("First... Second... Third...") | Reliable ordering of prop state changes (cap on → cap off → cap on table → drink) |
+| Hand-relative size anchor ("fits in one palm, fingers wrap around it") | Prevents VEO from generating the jar too large |
+| Prop state description at each stage ("the lid is now ON the table, the jar has no lid") | More reliable than describing the motion abstractly |
+| Continuous narrative scene (no shot lists, no timings) | Passes safety filter more consistently than structured shot breakdowns |
+
+---
+
 ## Key Decisions
 - Three-model split: text model handles all prompt manipulation (cheap, fast); image model handles both generate and remix via the same generateContentStream API; video model uses the separate generateVideos long-running operation API — keeping the surface area minimal while allowing independent model upgrades.
 - generateContentStream is used for images (not generateContent) to allow incremental chunk processing and avoid timeouts on large responses.
@@ -100,6 +135,7 @@ Prompt enhancement for text tasks uses `rewritePromptForImageTask()` (text model
 - `/home/angieng/CloudAceSIG/Projects/gen_media/server/src/services/styles.js`
 
 ## Related
+- [[Session-Jun30]] — New Moon product videos, VEO safety filter learnings, prompt patterns
 - [[Brand kit integration and placeholder resolution]]
 - [[GCS storage layer (uploadFile / uploadBuffer)]]
 - [[Style presets system (getStyleById / buildSystemPrompt)]]
