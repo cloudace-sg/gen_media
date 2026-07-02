@@ -141,6 +141,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-27 | `45fad58` | feat | add Terraform module for Gemini billing protection |
 | 2026-06-27 | `7159d82` | docs+feat | Gemini Usage Guard — simplified Terraform module, new-project setup guide, billing admin handover docs |
 | 2026-06-29 | _(this commit)_ | docs | session-end Obsidian sync — delivery model, usage-guard, billing admin access scope |
+| 2026-07-01 | `2ccc3e4` | chore | docs+scripts: session-end sync Jun 30 — VEO product videos, SOW-33 added, SOW-11/22 marked partial |
+| 2026-07-01 | `beebefe` | docs | session-end Obsidian sync Jul 1 — SOW catchup, SOW-11/22 partial, SOW-33 added |
 
 ---
 

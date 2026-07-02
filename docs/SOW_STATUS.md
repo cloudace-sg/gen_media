@@ -5,7 +5,7 @@ status: updated
 
 # SOW Status Tracker
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 Quick-reference audit of all 32 SOW items plus new additions built beyond the original scope. Source of truth for feature completion.
 
@@ -57,7 +57,7 @@ Quick-reference audit of all 32 SOW items plus new additions built beyond the or
 | SOW-13 | Product Photo Studio | ❌ Pending |
 | SOW-14 | Product Consistency Lock | ❌ Pending |
 | SOW-15 | Multi-Format Campaign Export | ❌ Pending |
-| SOW-16 | Text & CTA Overlay Editor | ❌ Pending |
+| SOW-16 | Text & CTA Overlay Editor | ❌ Pending — Omni Flash native text rendering reduces this from ffmpeg post-process to prompt-engineering |
 | SOW-17 | Product Line Variations | ❌ Pending — blocked on SOW-14 |
 
 ---
@@ -93,7 +93,7 @@ Quick-reference audit of all 32 SOW items plus new additions built beyond the or
 
 | # | Feature | Status |
 |---|---------|--------|
-| SOW-29 | Progressive Refinement (Chat-Style) | ❌ Pending |
+| SOW-29 | Progressive Refinement (Chat-Style) | ❌ Pending — implementation path: Omni Flash Interactions API (see SOW-35) |
 | SOW-30 | Share & Annotate for Review | ❌ Pending |
 | SOW-31 | Project Folders | ❌ Pending — blocked on SOW-7 metadata |
 | SOW-32 | Collateral Templates | ❌ Pending |
@@ -105,8 +105,17 @@ Quick-reference audit of all 32 SOW items plus new additions built beyond the or
 | # | Feature | Status | Commits |
 |---|---------|--------|---------|
 | SOW-33 | Talking Avatar / AI Spokesperson Video | ❌ Pending | — |
+| SOW-34 | Apply Branding to Video (Omni Flash) | ❌ Pending | — |
+| SOW-35 | Conversational Video Editing (Omni Flash) | ❌ Pending | — |
+| SOW-36 | Audio-First Video Generation | ❌ Pending | — |
 
 **SOW-33 detail:** User provides a portrait image + script → Veo 3.1 generates a lip-synced spokesperson video natively (no ElevenLabs, no ffmpeg audio mux). Dialogue wrapped in `"double quotes"` triggers Veo's native lip-sync engine. Reuses all existing Veo infrastructure (RAI retry, reference images, GCS polling). Frontend: new Talking Avatar mode in PromptDrawer with portrait upload + script textarea + voice style selector.
+
+**SOW-34 detail:** "Apply Branding" action on My Files video cards → Omni Flash video-to-video edit with brand kit injected. Logo passed as `<IMAGE_REF_1>`, brand colour/font context in prompt. Returns branded version saved as new My Files asset. Precision logo placement (pixel-perfect positioning) uses ffmpeg composite as fallback. Model: `gemini-omni-flash-preview`. Depends on SOW-35 for the edit infrastructure.
+
+**SOW-35 detail:** "Edit This Video" drawer on My Files video cards powered by Omni Flash Interactions API. Freeform edit prompt + quick-action chips (Remove object / Add object / Change style / Add text / Change lighting / Change background). Stateful multi-turn via `previous_interaction_id` — generates a conversation thread where each edit builds on the previous. Each version saveable to My Files. Requires new `generateVideoOmni()` method in `gemini.js` using `generateContent` (not `generateVideos`). Also covers SOW-29 (Progressive Refinement).
+
+**SOW-36 detail:** Audio-first video generation mode. User provides a voiceover audio file or records one → Omni Flash generates video that syncs to its rhythm, pacing, and cuts. Useful for product demos and social ads where copy is written first. Frontend: new "Audio-first" tab in PromptDrawer with audio upload + visual treatment prompt.
 
 ---
 
@@ -135,8 +144,8 @@ Built during Jun 18 2026 session. Not in original scope.
 | Phase 4 | 4 | 0 | 0 | 4 |
 | Phase 5 | 7 | 0 | 1 | 6 |
 | Phase 6 | 4 | 0 | 0 | 4 |
-| Phase 7 | 1 | 0 | 0 | 1 |
-| **SOW Total** | **33** | **4 (12%)** | **3 (9%)** | **26 (79%)** |
+| Phase 7 | 4 | 0 | 0 | 4 |
+| **SOW Total** | **36** | **4 (11%)** | **3 (8%)** | **29 (81%)** |
 | New additions | 6 | 6 | — | — |
 
 ---

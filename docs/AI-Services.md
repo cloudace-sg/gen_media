@@ -71,6 +71,58 @@ A code comment explicitly warns that when Gemini Omni Flash ships, it will use `
 
 ---
 
+## Gemini Omni Flash (`gemini-omni-flash-preview`)
+
+Released Jun 30 2026. A separate model from Veo — complementary, not a replacement. **Veo generates, Omni edits.**
+
+**Not yet integrated into this project.** New method `generateVideoOmni()` must be added to `server/src/services/gemini.js` — it uses `generateContent` (not `generateVideos`), so it is not a simple model ID swap. The Interactions API (`previous_interaction_id`) requires stateful session tracking not present in the current server.
+
+### Key capabilities vs Veo 3.1
+
+| Capability | Omni Flash | Veo 3.1 |
+|---|---|---|
+| Edit an existing video | ✅ | ❌ |
+| Multi-turn conversational editing | ✅ Interactions API | ❌ |
+| Add/remove objects in video | ✅ | ❌ |
+| Style transfer on existing video | ✅ | ❌ |
+| Audio-first (voiceover → synced video) | ✅ | ❌ |
+| Multiple tagged subject references | ✅ `<IMAGE_REF_N>` | Limited |
+| Cost per second | $0.10 | $0.40 (standard) |
+| 1080p / 4K | ❌ 720p only | ✅ |
+| Lip-synced dialogue | ❌ | ✅ |
+| Negative prompts | ❌ | ✅ |
+
+### Output specs
+- 720p, 24 FPS, 3–10s, MP4 with native audio, 16:9 or 9:16
+- Delivery: base64 (<4MB) or URI polling (>4MB)
+- SynthID watermark on every clip
+
+### Pricing
+$0.10/second ($17.50 per 1M output video tokens, billed at 5,792 tokens/s)
+
+### Real human video editing policy
+- Allowed: edit background, lighting, objects, scene around a real person
+- Blocked: speech/audio editing, changing what a person says
+- Blocked: recognizable/public figures (classifier-based), minors
+- Blocked entirely in EEA, Switzerland, UK for uploaded video editing
+
+### Voiceover + captions
+- **Audio-first generation** ✅ — provide a voiceover audio file, model generates video synced to it
+- **Captions baked into video** ✅ — native text rendering (EN, ZH, JA, KO)
+- **Adding voiceover to existing video** ❌ — not supported; use ffmpeg + TTS
+- **Voice/speech editing** ❌ — explicitly blocked
+
+### Planned integration surface (not yet built)
+- "Apply Branding" action on My Files video cards → Omni Flash video-to-video with logo as `<IMAGE_REF_1>`
+- "Edit This Video" drawer → freeform edit prompt on existing video
+- Conversation thread → Interactions API stateful editing (SOW-29)
+- "Restyle" picker → style transfer on existing video
+- Text overlay editor → native text rendering as edit step (SOW-16)
+
+Full research: [[Gemini-Omni-Flash]]
+
+---
+
 ## Brand Integration (cross-cutting)
 
 All three routes apply brand placeholder resolution before calling the service:
