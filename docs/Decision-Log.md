@@ -143,6 +143,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-06-29 | _(this commit)_ | docs | session-end Obsidian sync — delivery model, usage-guard, billing admin access scope |
 | 2026-07-01 | `2ccc3e4` | chore | docs+scripts: session-end sync Jun 30 — VEO product videos, SOW-33 added, SOW-11/22 marked partial |
 | 2026-07-01 | `beebefe` | docs | session-end Obsidian sync Jul 1 — SOW catchup, SOW-11/22 partial, SOW-33 added |
+| 2026-07-02 | `3e47ab2` | docs | session-end Obsidian sync Jul 2 — Gemini Omni Flash research, SOW-34/35/36 added |
+| 2026-07-03 | — | research | Gemini API security deep-dive — attack surface map (9 vectors, 7 app types), GCP-native proactive controls, Workload Identity as primary fix, connector risks (WhatsApp/Slack/Zapier), two deployment scenarios, recovery playbook. Full plan saved to Gemini-API-Security.md |
 
 ---
 

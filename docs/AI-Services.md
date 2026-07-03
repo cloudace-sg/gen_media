@@ -167,6 +167,28 @@ VEO's safety classifier can block product consumption videos. Key patterns obser
 
 ---
 
+## Security & Abuse Prevention
+
+Full security plan: [[Gemini-API-Security]]
+
+The current `billing-protection` and `usage-guard` Terraform modules are **reactive** — they fire after budget thresholds are hit. The proactive layer (researched 2026-07-03) adds prevention before spend occurs:
+
+| Priority | Control | What It Prevents | Cost |
+|---|---|---|---|
+| 1 | **Workload Identity** | Credential theft — no API key exists at all | Free |
+| 2 | **Gemini QPM Quota** | Any volume abuse — Google hard cap independent of billing | Free |
+| 3 | **Cloud Armor** | Bot attacks, IP flooding, geo-restriction | $6–15/mo |
+| 4 | **Cloud Run max-instances** | Blast radius ceiling on concurrent Gemini calls | Free |
+| 5 | **App Middleware** | Per-user rate limit, video concurrency lock, agent iteration cap, webhook verify | Free |
+
+**Workload Identity replaces `GOOGLE_GEMINI_API_KEY`:** The Gemini SDK picks up ADC automatically on Cloud Run when no API key env var is set. Removing the env var is the only required change — the key simply ceases to exist and there is nothing to steal.
+
+**QPM quota is the single most important proactive control:** Set in GCP Console → APIs & Services → Gemini API → Quotas. Google enforces this server-side regardless of billing status or circuit breaker state.
+
+Next: merge `terraform/billing-protection/` and `terraform/usage-guard/` into a single `terraform/gemini-protection/` module using Workload Identity throughout.
+
+---
+
 ## Key Decisions
 - Three-model split: text model handles all prompt manipulation (cheap, fast); image model handles both generate and remix via the same generateContentStream API; video model uses the separate generateVideos long-running operation API — keeping the surface area minimal while allowing independent model upgrades.
 - generateContentStream is used for images (not generateContent) to allow incremental chunk processing and avoid timeouts on large responses.
