@@ -83,3 +83,23 @@ Added a "Swap Product" file picker inside `RecreatePanel.js` — uploading an im
 - [[SOW_STATUS]] — full tracker, SOW-11 now marked Done
 - [[Video Analysis Pipeline]] — original Jun 29–30 prototype this session built on
 - [[Session-Jul01]] — when SOW-11 was first marked Partial
+
+---
+
+## 5. Deploy troubleshooting — eslint build break
+
+First Cloud Build deploy attempt (commit `2748f73`, build `a8eb92a8`) failed on `Failed to compile` / `Environment key "jest/globals" is unknown`. Root cause: no `package-lock.json` in `client/`, so Cloud Build's fresh `npm install` resolved a newer `eslint-plugin-jest` than what's installed locally, which no longer registers the `jest/globals` ESLint environment that `eslint-config-react-app`'s `react-app/jest` override still requires. Since the project has zero test files, dropped `react-app/jest` from `client/package.json`'s `eslintConfig.extends` — verified locally (background build, exit 0), committed as `4655c10`, redeployed successfully (build `d34442c9`, revision `gen-media-demo-00389-8qd`).
+
+The deploy-logging hook briefly mis-recorded this as two `FAILED` entries in `docs/Infrastructure.md` (it only sees the immediate tool-call result, not the background build's actual outcome) — corrected manually.
+
+---
+
+## 6. Token-discipline retrospective
+
+User asked for a review of this session's Claude Code token usage. No live token-metering tool exists for self-inspection (`/cost` is the real number, run by the user), so this was a qualitative audit of the transcript instead. Concrete finding: `PromptDrawer.js` (1299 lines), `ImageViewer.js` (639 lines), and `useStore.js` (323 lines) were each read in full for orientation, when this project's own `graphify explain "<name>"` already gives callers/callees/file:line in ~15 lines — the project's existing 3-Layer Query Rule (in `CLAUDE.md`) was underused this session.
+
+**Changes made:**
+- `CLAUDE.md` — strengthened rule 3 of the 3-Layer Query Rule with an explicit "don't read cold" callout, and added a new "Efficient Tool Usage" section: filter noisy build/deploy output before it lands in context, use `offset`/`limit` reads, use narrow `ToolSearch` queries (`select:<name>` over vague keywords), fork log-heavy investigation. Committed as `72c8505`.
+- Cross-session memory `feedback_token_discipline.md` saved to the auto-memory system, so this applies automatically in future sessions on this project without being re-explained.
+
+**Why this matters:** the project already has tooling (graphify) that solves the "get oriented in a large codebase" problem cheaply; the fix here is behavioral (use it consistently) not infrastructural (nothing new to build).
