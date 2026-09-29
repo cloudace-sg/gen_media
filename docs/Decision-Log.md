@@ -153,6 +153,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-09-29 | `2115336` | docs | session-end Obsidian sync Sep 29 — correct deploy log |
 | 2026-09-29 | `18da5c3` | docs | log Decision-Log sync commit hash |
 | 2026-09-29 | `72c8505` | docs | codify token-discipline habits in CLAUDE.md |
+| 2026-09-29 | `be455a2` | docs | session-end Obsidian sync Sep 29 — deploy fix + token-discipline retro |
+| 2026-09-30 | _(this session)_ | verify+docs | SOW-11 deploy verification — confirmed `gen-media-demo-00400-pfn` (built from `be455a2`) is live with Recreate This feature; found product-swap fidelity-rule hallucination bug (bottle/cap/drinking rules generated for non-bottle products). Full detail in Session-Sep30.md |
 
 ---
 
