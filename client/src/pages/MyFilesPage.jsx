@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listFiles, getSignedUrl, deleteFiles } from '../services/api';
+import { listFiles, getSignedUrl, deleteFiles, reverseEngineerPrompt } from '../services/api';
 import { useStore } from '../store/useStore';
 import PageHeader from '../components/ui/PageHeader';
-import { Image as ImageIcon, Video, Trash2, Download, Info, ChevronDown, Plus, ArrowRight } from 'lucide-react';
+import { Image as ImageIcon, Video, Trash2, Download, Info, ChevronDown, Plus, ArrowRight, Wand2 } from 'lucide-react';
 
 // Custom dropdown component matching the canvas page style
 const TypeDropdown = ({ value, onChange, options }) => {
@@ -64,7 +64,7 @@ export default function MyFilesPage() {
   const [loading, setLoading] = React.useState(false);
   const [selected, setSelected] = React.useState(null);
   const [selection, setSelection] = React.useState(new Set());
-  const { stageImage, triggerExtend } = useStore();
+  const { stageImage, triggerExtend, openRecreatePanel, setRecreateResult, setRecreateError } = useStore();
   const navigate = useNavigate();
 
   const sortOptions = [
@@ -148,6 +148,18 @@ export default function MyFilesPage() {
     navigate('/');
   };
 
+  const handleRecreate = async (it) => {
+    const isVideo = String(it.contentType || '').startsWith('video/');
+    const image = { id: it.key, title: it.key.split('/').pop(), url: it.url, mediaType: isVideo ? 'video' : 'image' };
+    openRecreatePanel(image);
+    try {
+      const result = await reverseEngineerPrompt({ mediaUrl: it.url, mediaType: image.mediaType });
+      setRecreateResult(result);
+    } catch (e) {
+      setRecreateError(e.message || 'Failed to analyze this asset');
+    }
+  };
+
   const handleDownload = async (it) => {
     try {
       const a = document.createElement('a');
@@ -182,6 +194,7 @@ export default function MyFilesPage() {
       </div>
       <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
         <button onClick={() => handleUseAsReference(it)} className="w-8 h-8 rounded bg-accent text-black hover:bg-accent-hover flex items-center justify-center" title="Use as reference"><Plus className="w-4 h-4" /></button>
+        <button onClick={() => handleRecreate(it)} className="w-8 h-8 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center justify-center" title="Recreate this — reverse-engineer a prompt"><Wand2 className="w-4 h-4" /></button>
         {String(it.contentType || '').startsWith('video/') && (
           <button onClick={() => handleExtend(it)} className="w-8 h-8 rounded bg-purple-600 text-white hover:bg-purple-500 flex items-center justify-center" title="Extend video"><ArrowRight className="w-4 h-4" /></button>
         )}
@@ -248,6 +261,7 @@ export default function MyFilesPage() {
             </div>
             <div className="mt-4 flex items-center gap-2">
               <button onClick={()=>handleUseAsReference(selected)} className="h-9 px-3 rounded bg-accent text-black hover:bg-accent-hover flex items-center gap-2"><Plus className="w-4 h-4" />Use as reference</button>
+              <button onClick={()=>handleRecreate(selected)} className="h-9 px-3 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-2"><Wand2 className="w-4 h-4" />Recreate</button>
               <button onClick={()=>handleDownload(selected)} className="h-9 px-3 rounded bg-dark-border text-dark-text hover:bg-gray-200 flex items-center gap-2"><Download className="w-4 h-4" />Download</button>
               <button onClick={()=>setSelected(null)} className="h-9 px-3 rounded bg-dark-border text-dark-text hover:bg-gray-200">Close</button>
             </div>

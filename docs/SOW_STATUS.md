@@ -5,7 +5,7 @@ status: updated
 
 # SOW Status Tracker
 
-Last updated: 2026-07-02
+Last updated: 2026-09-29
 
 Quick-reference audit of all 32 SOW items plus new additions built beyond the original scope. Source of truth for feature completion.
 
@@ -39,14 +39,14 @@ Quick-reference audit of all 32 SOW items plus new additions built beyond the or
 | SOW-8 | Video Scene Extension | ✅ Done | `0ef8a77`, `580d03f` |
 | SOW-9 | Golden Prompts Library | ❌ Pending | — |
 | SOW-10 | Brand Profile Auto-Detection | ❌ Pending | — |
-| SOW-11 | Reverse-Engineer to Prompt (Image + Video Analysis) | 🟡 Partial | — |
+| SOW-11 | Reverse-Engineer to Prompt (Image + Video Analysis) | ✅ Done | `[[Session-Sep29]]` |
 | SOW-12 | A/B Comparison View | ❌ Pending | Blocked on SOW-3 |
 
 **SOW-7 partial:** Staging and "Use as Reference" button work for all asset types. Missing: custom GCS metadata tagging at upload time — file cards don't display the original prompt. This blocks SOW-31 (project folders).
 
 **SOW-8 detail:** "Extend" button on My Files video cards (`0ef8a77`). Extend sub-mode tab in PromptDrawer (`580d03f`). Veo-generated videos use `videoUrl` path (last-frame scene extension). Non-Veo videos extract last frame client-side as image reference.
 
-**SOW-11 partial:** `scripts/analyze-video.js` + `scripts/test-veo-generation.js` built Jun 29–30 as standalone pre-integration prototypes. `analyze-video.js` sends a video to `gemini-3.5-flash` and returns scenes, transcript, events, text overlays, a reverse-engineered VEO prompt (JSON), and a product-swap variant. `test-veo-generation.js` consumes that JSON output and fires a VEO generation, with optional `--tweak` flag for natural-language changes while preserving product fidelity rules. Missing: UI integration (`POST /api/prompt/reverse` endpoint, "Recreate This" button, shot breakdown panel). Integration path: lift functions into `server/src/services/gemini.js` when SOW-11 starts in earnest.
+**SOW-11 detail:** Completed 2026-09-29. `scripts/analyze-video.js` (built Jun 29–30 as a standalone prototype) extended to auto-detect images vs. video and analyze both. Analysis logic ported into `GeminiService.reverseEngineerPrompt()` (`server/src/services/gemini.js`) — branches on media type, uses Files API upload + poll for video, inline base64 for images. New `POST /api/prompt/reverse` endpoint (`server/src/routes/prompt.js`). Frontend: "Recreate" button in `ImageViewer.js` (image + video headers) and `MyFilesPage.jsx` (card actions + details panel); new `RecreatePanel.js` right-drawer shows the generated prompt, style tags, aspect ratio, shot-by-shot product-interaction and text-overlay breakdown, and confidence notes, with a "Use this prompt" button that populates `PromptDrawer` via a `pendingRecreate` one-shot store action. Product swap supported end-to-end — upload a different product image in the panel and the prompt regenerates with that product's fidelity rules substituted in. Full detail in [[Session-Sep29]].
 
 ---
 
@@ -139,13 +139,13 @@ Built during Jun 18 2026 session. Not in original scope.
 | Phase | Total | ✅ Done | 🟡 Partial | ❌ Pending |
 |-------|-------|--------|-----------|-----------|
 | Phase 1 | 7 | 3 | 0 | 4 |
-| Phase 2 | 6 | 1 | 2 | 3 |
+| Phase 2 | 6 | 2 | 1 | 3 |
 | Phase 3 | 5 | 0 | 0 | 5 |
 | Phase 4 | 4 | 0 | 0 | 4 |
 | Phase 5 | 7 | 0 | 1 | 6 |
 | Phase 6 | 4 | 0 | 0 | 4 |
 | Phase 7 | 4 | 0 | 0 | 4 |
-| **SOW Total** | **36** | **4 (11%)** | **3 (8%)** | **29 (81%)** |
+| **SOW Total** | **36** | **5 (14%)** | **2 (6%)** | **29 (81%)** |
 | New additions | 6 | 6 | — | — |
 
 ---

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { uploadFile, uploadBuffer } = require('./storage');
+const { getPublicStyles } = require('./styles');
 
 // Centralized model configuration.
 // Text and image models use the generateContent / generateContentStream API.
@@ -20,6 +21,101 @@ const MODELS = {
   video: 'veo-3.1-generate-001',            // GA model via Vertex AI; falls back to preview on Developer API if no GCP_PROJECT_ID
   videoFallback: 'veo-3.1-generate-preview', // Developer API fallback when Vertex AI not configured (local dev)
 };
+
+// SOW-11: Reverse-Engineer to Prompt — prompt templates for the "Recreate This" flow.
+// Video path uploads via Files API (long-form understanding); image path uses inlineData.
+const STYLE_PRESET_LIST = getPublicStyles()
+  .map((s) => `- ${s.id}: ${s.label} — ${s.description}`)
+  .join('\n');
+
+const REVERSE_PROMPT_VIDEO_PROMPT = `You are an expert at writing prompts for AI video generation models (specifically Google VEO 3.1).
+
+Watch this video carefully in full, then write a generation prompt that reproduces the same:
+- Subject(s) and their appearance
+- Setting / environment / background
+- Camera movement and angle
+- Lighting mood and color grading
+- Pacing and visual style
+- Actions and motion
+- Overall emotional tone
+
+CRITICAL — Product Interaction Fidelity:
+Any scene where a person handles, holds, unboxes, unscrews, drinks from, or displays the product must be described with extreme precision. Include:
+- Exact hand grip and orientation (e.g. "right hand grips bottle vertically, label facing camera")
+- Which direction the cap/lid opens
+- Whether the label/logo is visible and which side faces the camera at all times
+- Any close-up product shots: state "product label must remain upright, unaltered, and fully legible at all times"
+
+MANDATORY PRODUCT FIDELITY RULES — embed these into every product interaction scene:
+1. SHAPE & SIZE LOCKED: Product dimensions and silhouette must be identical in every single scene. Never resize, stretch, or morph.
+2. LOGO LOCKED: Logo design, colours, and layout must be pixel-identical to the reference image in every frame. Never simplify or alter.
+3. CAP REMOVAL MUST BE REALISTIC: The cap must physically rotate and lift off in a continuous motion. No jump cuts, no dissolves — the cap must visibly come off on screen.
+4. CONSUMPTION MUST BE REAL: When the product is drunk, liquid must visibly flow from bottle to mouth. Bottle level must visibly decrease. Never cut away before consumption completes.
+5. CROSS-SCENE CONSISTENCY: Product appearance must be identical across all scenes — same shape, same label, same cap colour, same liquid colour.
+
+CRITICAL — Text Overlay Fidelity:
+Any text that appears on screen (taglines, slogans, product names, CTAs) must follow these rules:
+- Only include text that was actually in the original video — do NOT invent new text
+- Each text overlay must appear at the correct moment, in the correct position (top / center / bottom)
+- Text must be clearly legible — large enough to read, high contrast against the background
+- Text must NOT fill the entire screen with random or unrelated words
+- Text must NOT bleed into product label areas or obscure the product
+- Each overlay is a short, discrete line — never a wall of text
+
+Return a JSON object with exactly these keys:
+{
+  "veo_prompt": "The full generation prompt as a single detailed paragraph. For every product interaction moment, add a parenthetical fidelity note in CAPS. For every text overlay moment, add a parenthetical in CAPS specifying the exact text, position, and that it must be legible and not full-screen, e.g. (TEXT OVERLAY: 'UNLEASH YOUR ENERGY' — BOLD WHITE CAPS, BOTTOM THIRD, FULLY LEGIBLE, MUST NOT FILL SCREEN). 150-300 words.",
+  "product_interaction_scenes": [
+    { "timestamp": "MM:SS", "action": "exact description of what the person does with the product", "fidelity_requirement": "what must not change — orientation, label visibility, cap direction, etc." }
+  ],
+  "text_overlay_scenes": [
+    { "timestamp": "MM:SS", "text": "exact verbatim text to display", "position": "top / center / bottom / top-left / bottom-right etc.", "style": "bold white capitals / yellow outlined text / etc.", "rule": "must be fully legible, short, discrete — must NOT fill the entire screen or overlap the product label" }
+  ],
+  "style_tags": ["cinematic", "handheld", "golden hour", "..."],
+  "suggested_aspect_ratio": "16:9 or 9:16 or 1:1",
+  "suggested_duration": "5s or 8s",
+  "camera_movement": "description of camera motion",
+  "confidence_notes": "Honest assessment of what VEO may still get wrong despite these instructions"
+}
+
+Return ONLY the JSON object. No markdown fences, no explanation.`;
+
+const REVERSE_PROMPT_IMAGE_PROMPT = `You are an expert at writing prompts for AI image generation models (Gemini / Imagen).
+
+Look at this image carefully, then write a generation prompt that reproduces the same:
+- Subject(s) and their appearance
+- Setting / environment / background
+- Composition and framing
+- Lighting mood and color grading
+- Overall visual style and emotional tone
+
+CRITICAL — Product Fidelity (if a product is the subject):
+- Exact shape, size, and proportions must be described precisely — never allow resizing or morphing
+- Logo design, colours, and layout must be described precisely enough to remain pixel-identical
+- Label orientation and legibility must be specified
+
+CRITICAL — Text Overlay Fidelity:
+Any text that appears on the image (taglines, slogans, product names, CTAs) must follow these rules:
+- Only include text that was actually in the original image — do NOT invent new text
+- Specify exact position (top / center / bottom) and style
+- Text must NOT fill the entire image or obscure the subject
+
+Here are this app's available style presets — pick the single closest match:
+${STYLE_PRESET_LIST}
+
+Return a JSON object with exactly these keys:
+{
+  "prompt": "The full generation prompt as a single detailed paragraph. For any product, add a parenthetical fidelity note in CAPS. For any text overlay, add a parenthetical in CAPS specifying the exact text, position, and legibility requirement. 100-250 words.",
+  "text_overlay_scenes": [
+    { "text": "exact verbatim text to display", "position": "top / center / bottom / top-left / bottom-right etc.", "style": "bold white capitals / yellow outlined text / etc.", "rule": "must be fully legible, short, discrete — must NOT fill the entire image or overlap the product label" }
+  ],
+  "style_tags": ["cinematic", "minimalist", "high-key", "..."],
+  "suggested_style_id": "the id of the closest matching preset from the list above, or 'freeform' if none fit",
+  "suggested_aspect_ratio": "16:9 or 9:16 or 1:1 or 4:5",
+  "confidence_notes": "Honest assessment of what an AI image model may still get wrong despite these instructions"
+}
+
+Return ONLY the JSON object. No markdown fences, no explanation.`;
 
 class GeminiService {
   constructor() {
@@ -413,6 +509,244 @@ class GeminiService {
       console.warn('analyzeReferenceImages failed, skipping:', err.message);
     }
     return null;
+  }
+
+  // Downloads a product reference image (data: URL or remote URL) and returns a precise
+  // text description with fidelity rules, for embedding into a reverse-engineered prompt.
+  async describeProductForReverseEngineering(imageUrl) {
+    let buffer;
+    let mimeType = 'image/jpeg';
+    if (imageUrl.startsWith('data:')) {
+      const match = imageUrl.match(/^data:(.+?);base64,(.*)$/);
+      if (match) {
+        mimeType = match[1];
+        buffer = Buffer.from(match[2], 'base64');
+      }
+    } else {
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      buffer = Buffer.from(response.data);
+      mimeType = mime.lookup(imageUrl) || 'image/jpeg';
+    }
+    if (!buffer) throw new Error(`Could not load product image: ${imageUrl}`);
+
+    const { candidates } = await this.genAIPrimary.models.generateContent({
+      model: MODELS.text,
+      contents: [{
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType, data: buffer.toString('base64') } },
+          {
+            text: `Describe this product image in precise detail for use in an AI generation prompt. Include:
+- Product name and brand (exactly as written on label)
+- Form factor: bottle, can, box, pouch, jar, etc. — be specific about shape and size
+- Colors and finish of the packaging (matte, glossy, metallic, transparent, etc.)
+- Cap/lid type: screw cap, flip top, pull tab, cork — color and material
+- Label layout: what is at the top, middle, bottom — logo position, key text, colors
+- Orientation anchors: which way is "up", where the logo sits, which side the label faces
+
+Then add a strict fidelity section with these exact rules:
+FIDELITY RULES:
+1. SHAPE & SIZE: The product's physical dimensions, silhouette, and proportions must remain identical in every scene — never shrink, stretch, bulge, or morph between shots.
+2. LOGO INTEGRITY: The logo design, colours, typography, and layout must not be altered, simplified, distorted, or reimagined in any frame. It must look exactly as it does in this image.
+3. LABEL INTEGRITY: The label must always appear upright and fully legible — never rotated, flipped, warped, or partially obscured. All text must be readable.
+4. CONSISTENCY ACROSS SCENES: The product must look identical across all scenes — same shape, same label, same colours. No scene-to-scene variation in the product's appearance.
+
+Write this as a structured block a director and AI model can reference exactly.`,
+          },
+        ],
+      }],
+    });
+    return candidates?.[0]?.content?.parts?.filter(p => !p.thought).map(p => p.text).join('').trim() || '';
+  }
+
+  // Runs a copy-editing pass over extracted text overlays (spelling/spacing/grammar).
+  async proofreadTextOverlays(textOverlays) {
+    if (!textOverlays || textOverlays.length === 0) return textOverlays;
+    const lines = textOverlays.map((t, i) => `${i + 1}. "${t.text}"`).join('\n');
+
+    try {
+      const { candidates } = await this.genAIPrimary.models.generateContent({
+        model: MODELS.text,
+        contents: [{
+          role: 'user',
+          parts: [{
+            text: `You are a copy editor. Check each of the following text overlays for spelling mistakes, missing spaces, incorrect spacing between words, grammar errors, and punctuation issues.
+
+For each line, return the corrected version. If a line is already correct, return it unchanged.
+
+Return a JSON array of strings in the same order, e.g. ["corrected text 1", "corrected text 2", ...]
+
+Text overlays to check:
+${lines}
+
+Return ONLY the JSON array. No explanation.`
+          }]
+        }]
+      });
+      let raw = candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim() || '[]';
+      if (raw.startsWith('```')) raw = raw.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+      const corrected = JSON.parse(raw);
+      return textOverlays.map((t, i) => ({ ...t, text: corrected[i] || t.text }));
+    } catch (err) {
+      console.warn('proofreadTextOverlays failed, using originals:', err.message);
+      return textOverlays;
+    }
+  }
+
+  // SOW-11: video path — uploads the clip via Files API (Gemini watches the full video),
+  // returns a Veo-ready reverse-engineered prompt plus shot-by-shot fidelity breakdown.
+  async reverseEngineerVideoPrompt(mediaUrl, productDescription) {
+    let buffer;
+    let mimeType = 'video/mp4';
+    if (mediaUrl.startsWith('data:')) {
+      const match = mediaUrl.match(/^data:(.+?);base64,(.*)$/);
+      if (match) {
+        mimeType = match[1];
+        buffer = Buffer.from(match[2], 'base64');
+      }
+    } else {
+      const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
+      buffer = Buffer.from(response.data);
+      mimeType = mime.lookup(mediaUrl) || 'video/mp4';
+    }
+    if (!buffer) throw new Error(`Could not load video: ${mediaUrl}`);
+
+    const tmpPath = path.join(os.tmpdir(), `reverse-engineer-${Date.now()}.mp4`);
+    let uploadedFile;
+    try {
+      fs.writeFileSync(tmpPath, buffer);
+      uploadedFile = await this.genAIPrimary.files.upload({ file: tmpPath, config: { mimeType } });
+      let polls = 0;
+      while (uploadedFile.state === 'PROCESSING' && polls < 60) {
+        await new Promise(r => setTimeout(r, 3000));
+        uploadedFile = await this.genAIPrimary.files.get({ name: uploadedFile.name });
+        polls++;
+      }
+      if (uploadedFile.state !== 'ACTIVE') {
+        throw new Error(`Video file never became ACTIVE (state: ${uploadedFile.state})`);
+      }
+    } finally {
+      try { fs.unlinkSync(tmpPath); } catch (_) {}
+    }
+
+    const videoPart = { fileData: { fileUri: uploadedFile.uri, mimeType: uploadedFile.mimeType } };
+    const promptText = productDescription
+      ? `${REVERSE_PROMPT_VIDEO_PROMPT}
+
+IMPORTANT — PRODUCT SWAP:
+Replace the original product in the video with the product described below. Keep all scene structure, people, actions, pacing, camera work, and setting identical.
+
+For every product interaction (taking out, unboxing, unscrewing cap, drinking, displaying):
+- SHAPE & SIZE: Product dimensions must be identical in every scene — never resize or morph
+- LOGO: Logo design, colours, and layout must exactly match the reference image in every frame — never alter or simplify
+- LABEL: Must face camera, remain upright and fully legible in every scene
+- CONSISTENCY: Product must look identical across all scenes
+
+For every text overlay (taglines, slogans, product names):
+- Use ONLY the exact text from the original video — do not invent or paraphrase
+
+Product to use:
+${productDescription}`
+      : REVERSE_PROMPT_VIDEO_PROMPT;
+
+    const { candidates } = await this.genAIPrimary.models.generateContent({
+      model: MODELS.text,
+      contents: [{ role: 'user', parts: [videoPart, { text: promptText }] }],
+    });
+
+    let raw = candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim() || '';
+    if (raw.startsWith('```')) raw = raw.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      return { veo_prompt: raw };
+    }
+    if (result.text_overlay_scenes?.length > 0) {
+      result.text_overlay_scenes = await this.proofreadTextOverlays(result.text_overlay_scenes);
+    }
+    return result;
+  }
+
+  // SOW-11: image path — analyzes a single image inline and returns a matching
+  // generation prompt plus the closest style preset already available in the app.
+  async reverseEngineerImagePrompt(mediaUrl, productDescription) {
+    let buffer;
+    let mimeType = 'image/jpeg';
+    if (mediaUrl.startsWith('data:')) {
+      const match = mediaUrl.match(/^data:(.+?);base64,(.*)$/);
+      if (match) {
+        mimeType = match[1];
+        buffer = Buffer.from(match[2], 'base64');
+      }
+    } else {
+      const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
+      buffer = Buffer.from(response.data);
+      mimeType = mime.lookup(mediaUrl) || 'image/jpeg';
+    }
+    if (!buffer) throw new Error(`Could not load image: ${mediaUrl}`);
+
+    const imagePart = { inlineData: { mimeType, data: buffer.toString('base64') } };
+    const promptText = productDescription
+      ? `${REVERSE_PROMPT_IMAGE_PROMPT}
+
+IMPORTANT — PRODUCT SWAP:
+Replace the original product in the image with the product described below. Keep the scene structure, subject, composition, lighting, and setting identical.
+
+For the product:
+- SHAPE & SIZE: Product dimensions must match the reference image exactly
+- LOGO: Logo design, colours, and layout must exactly match the reference image — never alter or simplify
+- LABEL: Must face camera, remain upright and fully legible
+
+For any text overlay: use ONLY exact text from the original image — do not invent or paraphrase.
+
+Product to use:
+${productDescription}`
+      : REVERSE_PROMPT_IMAGE_PROMPT;
+
+    const { candidates } = await this.genAIPrimary.models.generateContent({
+      model: MODELS.text,
+      contents: [{ role: 'user', parts: [imagePart, { text: promptText }] }],
+    });
+
+    let raw = candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim() || '';
+    if (raw.startsWith('```')) raw = raw.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      return { prompt: raw };
+    }
+    if (result.text_overlay_scenes?.length > 0) {
+      result.text_overlay_scenes = await this.proofreadTextOverlays(result.text_overlay_scenes);
+    }
+    return result;
+  }
+
+  /**
+   * SOW-11: Reverse-Engineer to Prompt. Given a staged image or video, returns a
+   * generation-ready prompt (plus style/fidelity breakdown) that recreates it, optionally
+   * swapping in a different product.
+   * @param {Object} params
+   * @param {string} params.mediaUrl - Staged asset URL (data: URL or remote URL)
+   * @param {('image'|'video')} [params.mediaType] - Explicit media type; inferred from URL if omitted
+   * @param {string} [params.productImageUrl] - Optional product image to swap into the recreated scene
+   * @returns {Promise<Object>} - Video: { veo_prompt, product_interaction_scenes, text_overlay_scenes, style_tags, suggested_aspect_ratio, suggested_duration, camera_movement, confidence_notes }.
+   *   Image: { prompt, text_overlay_scenes, style_tags, suggested_style_id, suggested_aspect_ratio, confidence_notes }.
+   */
+  async reverseEngineerPrompt({ mediaUrl, mediaType, productImageUrl }) {
+    if (!mediaUrl) throw new Error('mediaUrl is required');
+    const isVideo = mediaType === 'video' || (!mediaType && /\.(mp4|webm|mov|avi)(\?|$)/i.test(mediaUrl));
+
+    const productDescription = productImageUrl
+      ? await this.describeProductForReverseEngineering(productImageUrl)
+      : null;
+
+    return isVideo
+      ? this.reverseEngineerVideoPrompt(mediaUrl, productDescription)
+      : this.reverseEngineerImagePrompt(mediaUrl, productDescription);
   }
 
   /**

@@ -112,6 +112,8 @@ const PromptDrawer = () => {
     setOutputMode,
     pendingExtend,
     clearPendingExtend,
+    pendingRecreate,
+    clearPendingRecreate,
     isLoading,
     setLoading,
     addRow
@@ -158,6 +160,21 @@ const PromptDrawer = () => {
       clearPendingExtend();
     }
   }, [pendingExtend, clearPendingExtend]);
+
+  // SOW-11: apply a reverse-engineered ("Recreate This") prompt into create mode
+  useEffect(() => {
+    if (!pendingRecreate) return;
+    setIsSearchMode(false);
+    setPrompt(pendingRecreate.prompt || '');
+    if (pendingRecreate.aspectRatio) {
+      if (pendingRecreate.mediaType === 'video') setVideoAspectRatio(pendingRecreate.aspectRatio);
+      else setGenerationAspectRatio(pendingRecreate.aspectRatio);
+    }
+    if (pendingRecreate.mediaType === 'image' && pendingRecreate.styleId) {
+      setStyleId(pendingRecreate.styleId);
+    }
+    clearPendingRecreate();
+  }, [pendingRecreate, clearPendingRecreate, setGenerationAspectRatio, setVideoAspectRatio, setStyleId]);
   const fileInputRef = useRef(null);
   const textRef = useRef(null);
   const [showExamples, setShowExamples] = useState(false);

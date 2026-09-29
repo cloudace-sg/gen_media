@@ -194,6 +194,17 @@ export const randomPrompt = async ({ mode, style, aspectRatio, resolution, brand
   }
 };
 
+// Reverse-Engineer to Prompt (SOW-11) — analyzes a staged image/video and returns a
+// generation-ready prompt (+ style/fidelity breakdown) that recreates it.
+export const reverseEngineerPrompt = async ({ mediaUrl, mediaType, productImageUrl }) => {
+  try {
+    const response = await api.post('/prompt/reverse', { mediaUrl, mediaType, productImageUrl });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || error.message || 'Failed to reverse-engineer prompt');
+  }
+};
+
 export const expandVideoPrompt = async ({ brief, template, fields, brandContext }) => {
   try {
     const response = await api.post('/prompt/expand', { brief, template, fields, brandContext });

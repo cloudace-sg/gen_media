@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 /**
- * Standalone Gemini full-video understanding script.
+ * Standalone Gemini full-video/image understanding script.
  *
  * Usage:
- *   node scripts/analyze-video.js <path-to-video>
- *   node scripts/analyze-video.js <path-to-video> --question "What product is being advertised?"
- *   node scripts/analyze-video.js <path-to-video> --reverse-prompt
- *   node scripts/analyze-video.js <path-to-video> --all   (analysis + reverse prompt together)
- *   node scripts/analyze-video.js <path-to-video> --reverse-prompt --product-image <image-path>
- *       (reverse-engineer the video style, then swap in your own product)
+ *   node scripts/analyze-video.js <path-to-video-or-image>
+ *   node scripts/analyze-video.js <path-to-video-or-image> --question "What product is being advertised?"
+ *   node scripts/analyze-video.js <path-to-video-or-image> --reverse-prompt
+ *   node scripts/analyze-video.js <path-to-video-or-image> --all   (analysis + reverse prompt together)
+ *   node scripts/analyze-video.js <path-to-video-or-image> --reverse-prompt --product-image <image-path>
+ *       (reverse-engineer the style, then swap in your own product)
+ *
+ * Media type (video vs image) is auto-detected from the file extension.
  *
  * Requires: GOOGLE_GEMINI_API_KEY in env (or .env file at project root)
  */
@@ -17,8 +19,92 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../server/.
 const fs = require('fs');
 const path = require('path');
 const { GoogleGenAI } = require('@google/genai');
+const { getPublicStyles } = require('../server/src/services/styles');
 
 const MODEL = 'gemini-3.5-flash';
+
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
+
+function isImageFile(filePath) {
+  return IMAGE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+}
+
+function imageMimeType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.png') return 'image/png';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.gif') return 'image/gif';
+  if (ext === '.bmp') return 'image/bmp';
+  return 'image/jpeg';
+}
+
+const STYLE_PRESET_LIST = getPublicStyles()
+  .map((s) => `- ${s.id}: ${s.label} — ${s.description}`)
+  .join('\n');
+
+const IMAGE_ANALYSIS_PROMPT = `You are a professional photo analyst. Analyze this image in full and return a structured JSON object with exactly these keys:
+
+{
+  "summary": "A concise description of the full image (1-3 sentences)",
+  "subject": "The main subject(s) of the image and their appearance",
+  "composition_notes": "Framing, rule of thirds, focal point, depth of field, camera angle",
+  "color_palette": ["dominant hex or color name", "..."],
+  "lighting": "description of lighting style and direction",
+  "mood": "the overall emotional tone / mood",
+  "key_themes": ["list", "of", "thematic", "keywords"],
+  "text_overlays": [
+    {
+      "text": "exact verbatim text as it appears on the image",
+      "position": "top / center / bottom / top-left / top-right / bottom-left / bottom-right",
+      "style": "brief description of font style, size, colour",
+      "covers_full_screen": true or false
+    }
+  ]
+}
+
+Return ONLY the JSON object. No markdown fences, no explanation.`;
+
+const IMAGE_REVERSE_PROMPT_PROMPT = `You are an expert at writing prompts for AI image generation models (Gemini / Imagen).
+
+Look at this image carefully, then write a generation prompt that reproduces the same:
+- Subject(s) and their appearance
+- Setting / environment / background
+- Composition and framing
+- Lighting mood and color grading
+- Overall visual style and emotional tone
+
+CRITICAL — Product Fidelity (if a product is the subject):
+- Exact shape, size, and proportions must be described precisely — never allow resizing or morphing
+- Logo design, colours, and layout must be described precisely enough to remain pixel-identical
+- Label orientation and legibility must be specified
+
+CRITICAL — Text Overlay Fidelity:
+Any text that appears on the image (taglines, slogans, product names, CTAs) must follow these rules:
+- Only include text that was actually in the original image — do NOT invent new text
+- Specify exact position (top / center / bottom) and style
+- Text must NOT fill the entire image or obscure the subject
+
+Here are this app's available style presets — pick the single closest match:
+${STYLE_PRESET_LIST}
+
+Return a JSON object with exactly these keys:
+{
+  "prompt": "The full generation prompt as a single detailed paragraph. For any product, add a parenthetical fidelity note in CAPS. For any text overlay, add a parenthetical in CAPS specifying the exact text, position, and legibility requirement. 100-250 words.",
+  "text_overlay_scenes": [
+    {
+      "text": "exact verbatim text to display",
+      "position": "top / center / bottom / top-left / bottom-right etc.",
+      "style": "bold white capitals / yellow outlined text / etc.",
+      "rule": "must be fully legible, short, discrete — must NOT fill the entire image or overlap the product label"
+    }
+  ],
+  "style_tags": ["cinematic", "minimalist", "high-key", ...],
+  "suggested_style_id": "the id of the closest matching preset from the list above, or 'freeform' if none fit",
+  "suggested_aspect_ratio": "16:9 or 9:16 or 1:1 or 4:5",
+  "confidence_notes": "Honest assessment of what an AI image model may still get wrong despite these instructions"
+}
+
+Return ONLY the JSON object. No markdown fences, no explanation.`;
 
 const REVERSE_PROMPT_PROMPT = `You are an expert at writing prompts for AI video generation models (specifically Google VEO 3.1).
 
@@ -326,6 +412,112 @@ ${productDescription}`
   }
 }
 
+async function reverseImagePrompt(genAI, imagePart, productDescription) {
+  console.error('\nGenerating reverse prompt for image...\n');
+
+  const promptText = productDescription
+    ? `${IMAGE_REVERSE_PROMPT_PROMPT}
+
+IMPORTANT — PRODUCT SWAP:
+Replace the original product in the image with the product described below. Keep the scene structure, subject, composition, lighting, and setting identical.
+
+For the product:
+- SHAPE & SIZE: Product dimensions must match the reference image exactly
+- LOGO: Logo design, colours, and layout must exactly match the reference image — never alter or simplify
+- LABEL: Must face camera, remain upright and fully legible
+
+For any text overlay: use ONLY exact text from the original image — do not invent or paraphrase.
+
+Product to use:
+${productDescription}`
+    : IMAGE_REVERSE_PROMPT_PROMPT;
+
+  const response = await genAI.models.generateContent({
+    model: MODEL,
+    contents: [{ role: 'user', parts: [imagePart, { text: promptText }] }],
+  });
+
+  let raw = response.text.trim();
+  if (raw.startsWith('```')) {
+    raw = raw.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  try {
+    const result = JSON.parse(raw);
+    if (result.text_overlay_scenes && result.text_overlay_scenes.length > 0) {
+      console.error('\nProofreading text overlays...');
+      result.text_overlay_scenes = await proofreadTexts(genAI, result.text_overlay_scenes);
+    }
+    return result;
+  } catch {
+    return { prompt: raw };
+  }
+}
+
+async function analyzeImage(filePath, { question, doReversePrompt, doAll, productImagePath }) {
+  const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GOOGLE_GEMINI_API_KEY is not set');
+  }
+
+  const genAI = new GoogleGenAI({ apiKey });
+
+  const mimeType = imageMimeType(filePath);
+  const imageData = fs.readFileSync(filePath).toString('base64');
+  const imagePart = { inlineData: { mimeType, data: imageData } };
+
+  // Focused Q&A mode
+  if (question) {
+    console.error(`\nAnswering: "${question}"\n`);
+    const response = await genAI.models.generateContent({
+      model: MODEL,
+      contents: [{ role: 'user', parts: [imagePart, { text: question }] }],
+    });
+    console.log(response.text);
+    return;
+  }
+
+  // Reverse prompt only
+  if (doReversePrompt && !doAll) {
+    const productDescription = productImagePath ? await describeProduct(genAI, productImagePath) : null;
+    if (productDescription) console.error(`\nProduct description:\n${productDescription}\n`);
+    const result = await reverseImagePrompt(genAI, imagePart, productDescription);
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  // Full structured analysis
+  console.error('\nRunning full image analysis...\n');
+  const analysisResponse = await genAI.models.generateContent({
+    model: MODEL,
+    contents: [{ role: 'user', parts: [imagePart, { text: IMAGE_ANALYSIS_PROMPT }] }],
+  });
+
+  let raw = analysisResponse.text.trim();
+  if (raw.startsWith('```')) {
+    raw = raw.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  let analysisResult;
+  try {
+    analysisResult = JSON.parse(raw);
+    if (analysisResult.text_overlays && analysisResult.text_overlays.length > 0) {
+      console.error('\nProofreading text overlays from analysis...');
+      analysisResult.text_overlays = await proofreadTexts(genAI, analysisResult.text_overlays);
+    }
+  } catch {
+    analysisResult = { raw };
+  }
+
+  if (doAll) {
+    const productDescription = productImagePath ? await describeProduct(genAI, productImagePath) : null;
+    const rpResult = await reverseImagePrompt(genAI, imagePart, productDescription);
+    console.log(JSON.stringify({ analysis: analysisResult, reverse_prompt: rpResult }, null, 2));
+  } else {
+    console.log(JSON.stringify(analysisResult, null, 2));
+  }
+}
+
 async function analyzeVideo(filePath, { question, doReversePrompt, doAll, productImagePath, variations }) {
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
   if (!apiKey) {
@@ -401,13 +593,13 @@ async function analyzeVideo(filePath, { question, doReversePrompt, doAll, produc
 const args = process.argv.slice(2);
 if (args.length === 0) {
   console.error([
-    'Usage:',
-    '  node scripts/analyze-video.js <video>                                                          # full structured analysis',
-    '  node scripts/analyze-video.js <video> --reverse-prompt                                         # VEO prompt to recreate this video',
-    '  node scripts/analyze-video.js <video> --reverse-prompt --product-image <img>                   # swap in your own product',
-    '  node scripts/analyze-video.js <video> --reverse-prompt --product-image <img> --variations N    # N distinct prompt variations',
-    '  node scripts/analyze-video.js <video> --all                                                    # analysis + reverse prompt',
-    '  node scripts/analyze-video.js <video> --question "..."                                         # ask a specific question',
+    'Usage (video or image, auto-detected by extension):',
+    '  node scripts/analyze-video.js <media>                                                          # full structured analysis',
+    '  node scripts/analyze-video.js <media> --reverse-prompt                                         # prompt to recreate this media',
+    '  node scripts/analyze-video.js <media> --reverse-prompt --product-image <img>                   # swap in your own product',
+    '  node scripts/analyze-video.js <video> --reverse-prompt --product-image <img> --variations N    # N distinct prompt variations (video only)',
+    '  node scripts/analyze-video.js <media> --all                                                    # analysis + reverse prompt',
+    '  node scripts/analyze-video.js <media> --question "..."                                         # ask a specific question',
   ].join('\n'));
   process.exit(1);
 }
@@ -432,7 +624,11 @@ if (productImagePath && !fs.existsSync(productImagePath)) {
   process.exit(1);
 }
 
-analyzeVideo(filePath, { question, doReversePrompt, doAll, productImagePath, variations }).catch(err => {
+const run = isImageFile(filePath)
+  ? analyzeImage(filePath, { question, doReversePrompt, doAll, productImagePath })
+  : analyzeVideo(filePath, { question, doReversePrompt, doAll, productImagePath, variations });
+
+run.catch(err => {
   console.error('Error:', err.message);
   process.exit(1);
 });

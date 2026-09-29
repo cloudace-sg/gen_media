@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
+import RecreatePanel from '../RecreatePanel';
 
 const AppShell = ({ children }) => {
   return (
@@ -13,6 +14,7 @@ const AppShell = ({ children }) => {
         </main>
         <Footer />
       </div>
+      <RecreatePanel />
     </div>
   );
 };

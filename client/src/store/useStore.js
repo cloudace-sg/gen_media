@@ -240,6 +240,40 @@ const useStore = create(
         }
       })),
 
+      // Recreate (SOW-11: Reverse-Engineer to Prompt) panel state
+      recreatePanel: {
+        isOpen: false,
+        loading: false,
+        error: null,
+        result: null,
+        mediaType: null,
+        sourceImage: null,
+      },
+      openRecreatePanel: (image) => set({
+        recreatePanel: {
+          isOpen: true,
+          loading: true,
+          error: null,
+          result: null,
+          mediaType: image.mediaType === 'video' ? 'video' : 'image',
+          sourceImage: image,
+        }
+      }),
+      setRecreateResult: (result) => set((state) => ({
+        recreatePanel: { ...state.recreatePanel, loading: false, result, error: null }
+      })),
+      setRecreateError: (error) => set((state) => ({
+        recreatePanel: { ...state.recreatePanel, loading: false, error }
+      })),
+      closeRecreatePanel: () => set({
+        recreatePanel: { isOpen: false, loading: false, error: null, result: null, mediaType: null, sourceImage: null }
+      }),
+
+      // One-shot: apply a reverse-engineered prompt into PromptDrawer's create mode
+      pendingRecreate: null,
+      applyRecreateToPrompt: (payload) => set({ pendingRecreate: payload, outputMode: payload.mediaType }),
+      clearPendingRecreate: () => set({ pendingRecreate: null }),
+
       // Brand Kit UI state
       brandKitModalOpen: false,
       openBrandKitModal: () => set({ brandKitModalOpen: true }),

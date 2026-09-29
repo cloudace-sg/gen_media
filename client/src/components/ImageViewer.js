@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Download, ZoomIn, ZoomOut, RotateCw, Move, Edit3, Plus, Camera } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCw, Move, Edit3, Plus, Camera, Wand2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { reverseEngineerPrompt } from '../services/api';
 
 // Lazy-load CanvasEditor (Konva)
 const CanvasEditor = React.lazy(() => import('./editor/CanvasEditor'));
@@ -19,7 +20,7 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
   const [retryCrossOrigin, setRetryCrossOrigin] = useState(true);
   const containerRef = useRef(null);
   const imageRef = useRef(null);
-  const { overlaysByAssetId, updateRow, getImageById, setLoading, isLoading, clearOverlays, stageImage, unstageImage, stagedImages, addRow } = useStore();
+  const { overlaysByAssetId, updateRow, getImageById, setLoading, isLoading, clearOverlays, stageImage, unstageImage, stagedImages, addRow, openRecreatePanel, setRecreateResult, setRecreateError } = useStore();
   const videoRef = useRef(null);
 
   const cacheBust = (url) => {
@@ -181,6 +182,20 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
     stageImage(frameImage);
   };
 
+  const handleRecreate = async () => {
+    if (!image) return;
+    openRecreatePanel(image);
+    try {
+      const result = await reverseEngineerPrompt({
+        mediaUrl: image.url,
+        mediaType: image.mediaType === 'video' ? 'video' : 'image',
+      });
+      setRecreateResult(result);
+    } catch (e) {
+      setRecreateError(e.message || 'Failed to analyze this asset');
+    }
+  };
+
   if (image.mediaType === 'video') {
     return (
       <div className="fixed top-0 right-0 bottom-24 w-1/2 bg-dark-surface border-l border-dark-border z-40 flex flex-col">
@@ -194,6 +209,14 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
             >
               <Camera className="h-3.5 w-3.5" />
               Extract frame
+            </button>
+            <button
+              onClick={handleRecreate}
+              className="px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm bg-dark-border text-dark-text hover:bg-accent hover:text-black transition-colors"
+              title="Reverse-engineer a prompt to recreate this video"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Recreate
             </button>
             <button
               onClick={handleToggleStage}
@@ -370,6 +393,14 @@ const ImageViewer = ({ image, onClose, onNext, onPrevious, hasNext, hasPrevious 
           </span>
         </div>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleRecreate}
+            className="px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm bg-dark-border text-dark-text hover:bg-accent hover:text-black transition-colors"
+            title="Reverse-engineer a prompt to recreate this image"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Recreate
+          </button>
           <button
             onClick={handleToggleStage}
             className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm transition-colors ${

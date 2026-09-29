@@ -72,6 +72,20 @@ router.post('/expand', async (req, res) => {
   }
 });
 
+router.post('/reverse', async (req, res) => {
+  try {
+    const { mediaUrl, mediaType, productImageUrl } = req.body || {};
+    if (!mediaUrl || !String(mediaUrl).trim()) {
+      return res.status(400).json({ error: 'mediaUrl required' });
+    }
+    const result = await getGemini().reverseEngineerPrompt({ mediaUrl, mediaType, productImageUrl });
+    res.json(result);
+  } catch (e) {
+    console.error('Reverse prompt error:', e);
+    res.status(500).json({ error: 'Reverse-engineer failed', message: e.message });
+  }
+});
+
 module.exports = router;
 
 
