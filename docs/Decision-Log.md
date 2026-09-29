@@ -148,6 +148,8 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-09-29 | _(this commit)_ | feat | SOW-11 complete — Reverse-Engineer to Prompt. Image analysis added to `analyze-video.js`; logic ported to `GeminiService.reverseEngineerPrompt()` + `POST /api/prompt/reverse`; frontend "Recreate This" button (ImageViewer, MyFiles), `RecreatePanel` UI, product-swap support. Full detail in Session-Sep29.md |
 | 2026-09-29 | `2748f73` | feat | SOW-11 Reverse-Engineer to Prompt — image support + full app integration |
 | 2026-09-29 | `1d5c456` | docs | session-end Obsidian sync Sep 29 — SOW-11 complete, push log |
+| 2026-09-29 | `31e12c7` | docs | log Decision-Log sync commit hash |
+| 2026-09-29 | `4655c10` | fix | drop react-app/jest eslint extend — breaks fresh Docker builds |
 
 ---
 

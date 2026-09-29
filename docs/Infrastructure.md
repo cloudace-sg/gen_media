@@ -120,6 +120,7 @@ Commit `e167185` (`fix: remove hardcoded GCS_BUCKET from Dockerfile startup scri
 - [[nginx reverse proxy configuration for API routing]]
 
 ## Deployments
+- **2026-09-29** `4655c10`: Cloud Build → Cloud Run ✅ SUCCESS (build `d34442c9`, revision `gen-media-demo-00389-8qd`) — first attempt at `2748f73` failed (build `a8eb92a8`): fresh `npm install` in Docker resolved a newer `eslint-plugin-jest` incompatible with `eslint-config-react-app`'s jest override (`Environment key "jest/globals" is unknown`). Fixed by dropping the unused `react-app/jest` ESLint extend (no test files in the project).
 - **2026-09-29** `2748f73`: pushed to GitHub
 - **2026-06-26** `f3b5126`: pushed to GitHub
 - **2026-06-25** `baf19db`: Cloud Build → Cloud Run ❌ FAILED
