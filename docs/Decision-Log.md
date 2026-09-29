@@ -150,6 +150,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-09-29 | `1d5c456` | docs | session-end Obsidian sync Sep 29 — SOW-11 complete, push log |
 | 2026-09-29 | `31e12c7` | docs | log Decision-Log sync commit hash |
 | 2026-09-29 | `4655c10` | fix | drop react-app/jest eslint extend — breaks fresh Docker builds |
+| 2026-09-29 | `2115336` | docs | session-end Obsidian sync Sep 29 — correct deploy log |
 
 ---
 
