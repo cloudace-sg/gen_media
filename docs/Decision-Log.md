@@ -146,6 +146,7 @@ The gen_media project evolved from a basic Gemini image generation tool (March 2
 | 2026-07-02 | `3e47ab2` | docs | session-end Obsidian sync Jul 2 — Gemini Omni Flash research, SOW-34/35/36 added |
 | 2026-07-03 | — | research | Gemini API security deep-dive — attack surface map (9 vectors, 7 app types), GCP-native proactive controls, Workload Identity as primary fix, connector risks (WhatsApp/Slack/Zapier), two deployment scenarios, recovery playbook. Full plan saved to Gemini-API-Security.md |
 | 2026-09-29 | _(this commit)_ | feat | SOW-11 complete — Reverse-Engineer to Prompt. Image analysis added to `analyze-video.js`; logic ported to `GeminiService.reverseEngineerPrompt()` + `POST /api/prompt/reverse`; frontend "Recreate This" button (ImageViewer, MyFiles), `RecreatePanel` UI, product-swap support. Full detail in Session-Sep29.md |
+| 2026-09-29 | `2748f73` | feat | SOW-11 Reverse-Engineer to Prompt — image support + full app integration |
 
 ---
 
